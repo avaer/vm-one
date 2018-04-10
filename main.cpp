@@ -1,6 +1,5 @@
 #include <v8.h>
 #include <nan.h>
-#include <iostream>
 
 using namespace v8;
 using namespace node;
@@ -61,8 +60,6 @@ NAN_METHOD(VmOne::New) {
 
 NAN_METHOD(VmOne::Run) {
   if (info[0]->IsString()) {
-    std::cout << "script 1" << "\n";
-
     Local<String> src = Local<String>::Cast(info[0]);
     Local<String> resourceName = info[1]->IsString() ?
         Local<String>::Cast(info[1])
@@ -80,15 +77,11 @@ NAN_METHOD(VmOne::Run) {
     VmOne *vmOne = ObjectWrap::Unwrap<VmOne>(info.This());
     Local<Context> contextLocal = Nan::New(vmOne->context);
 
-    std::cout << "script 2" << "\n";
-
     ScriptOrigin scriptOrigin(
       resourceName,
       lineOffset,
       colOffset
     );
-
-    std::cout << "script 3" << "\n";
 
     {
       Nan::TryCatch tryCatch;
