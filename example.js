@@ -1,7 +1,6 @@
-const VmOne = require('.');
+const vmOne = require('.');
 
-const v = new VmOne({
+vmOne(`console.log(lol);`, {
   console,
   lol: 'zol',
 });
-v.run(`console.log(lol);`);
