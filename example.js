@@ -4,4 +4,4 @@ const v = new VmOne({
   console,
   lol: 'zol',
 });
-// v.run(`console.log(lol);`);
+v.run(`console.log(lol);`);

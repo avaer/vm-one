@@ -126,8 +126,8 @@ VmOne::VmOne(Local<Object> globalInit) {
   size_t numPropertyNames = propertyNames->Length();
   for (size_t i = 0; i < numPropertyNames; i++) {
     Local<String> key = propertyNames->Get(i)->ToString();
-    Local<Value> value = globalInit->Get(key);
-    contextGlobal->Set(key, value);
+    Local<Value> value = globalInit->Get(localContext, key).ToLocalChecked();
+    contextGlobal->Set(localContext, key, value);
   }
 
   localContext->AllowCodeGenerationFromStrings(true);
