@@ -19,11 +19,11 @@ class VmOne : public ObjectWrap {
     static NAN_METHOD(New);
     static NAN_METHOD(Run);
 
-    VmOne(Local<Object> globalInit);
+    VmOne(Local<Object> globalInit, Local<Function> handler);
     ~VmOne();
 
     Nan::Persistent<Context> context;
-    Nan::Persistent<Object> global;
+    Nan::Persistent<Function> handler;
 };
 
 Handle<Object> VmOne::Initialize() {
@@ -44,12 +44,13 @@ Handle<Object> VmOne::Initialize() {
 }
 
 NAN_METHOD(VmOne::New) {
-  if (info[0]->IsObject()) {
+  if (info[0]->IsObject() && info[1]->IsFunction()) {
     Local<Object> global = Local<Object>::Cast(info[0]);
+    Local<Function> handler = Local<Function>::Cast(info[1]);
 
     Local<Object> vmOneObj = Local<Object>::Cast(info.This());
 
-    VmOne *vmOne = new VmOne(global);
+    VmOne *vmOne = new VmOne(global, handler);
     vmOne->Wrap(vmOneObj);
 
     info.GetReturnValue().Set(vmOneObj);
@@ -76,18 +77,33 @@ NAN_METHOD(VmOne::Run) {
 
     VmOne *vmOne = ObjectWrap::Unwrap<VmOne>(info.This());
     Local<Context> contextLocal = Nan::New(vmOne->context);
-
-    ScriptOrigin scriptOrigin(
-      resourceName,
-      lineOffset,
-      colOffset
-    );
+    Local<Function> handler = Nan::New(vmOne->handler);
 
     {
       Nan::TryCatch tryCatch;
+
+      {
+        Local<Value> argv[] = {
+          JS_STR("compilestart"),
+        };
+        handler->Call(Nan::Null(), sizeof(argv)/sizeof(argv[0]), argv);
+      }
+
+      ScriptOrigin scriptOrigin(
+        resourceName,
+        lineOffset,
+        colOffset
+      );
       MaybeLocal<Script> scriptMaybe = Script::Compile(contextLocal, src, &scriptOrigin);
 
-      if (!tryCatch.HasCaught()) {
+      {
+        Local<Value> argv[] = {
+          JS_STR("compileend"),
+        };
+        handler->Call(Nan::Null(), sizeof(argv)/sizeof(argv[0]), argv);
+      }
+
+      if (!scriptMaybe.IsEmpty()) {
         Local<Script> script = scriptMaybe.ToLocalChecked();
         Local<Value> result = script->Run();
 
@@ -105,7 +121,9 @@ NAN_METHOD(VmOne::Run) {
   }
 }
 
-VmOne::VmOne(Local<Object> globalInit) {
+VmOne::VmOne(Local<Object> globalInit, Local<Function> handler) {
+  this->handler.Reset(handler);
+
   Local<Context> localContext = Context::New(Isolate::GetCurrent());
   Local<Object> contextGlobal = localContext->Global();
 
