@@ -113,16 +113,10 @@ NAN_METHOD(VmOne::Run) {
 }
 
 VmOne::VmOne(Local<Object> globalInit) {
-  Local<Object> topLevelGlobal = Isolate::GetCurrent()->GetCurrentContext()->Global();
-  Local<Function> keysFn = Local<Function>::Cast(topLevelGlobal->Get(JS_STR("Object"))->ToObject()->Get(JS_STR("keys")));
-
   Local<Context> localContext = Context::New(Isolate::GetCurrent());
   Local<Object> contextGlobal = localContext->Global();
 
-  Local<Value> argv[] = {
-    globalInit,
-  };
-  Local<Array> propertyNames = Local<Array>::Cast(keysFn->Call(Nan::Null(), sizeof(argv)/sizeof(argv[0]), argv));
+  Local<Array> propertyNames = globalInit->GetOwnPropertyNames(localContext).ToLocalChecked();
   size_t numPropertyNames = propertyNames->Length();
   for (size_t i = 0; i < numPropertyNames; i++) {
     Local<String> key = propertyNames->Get(i)->ToString();
