@@ -76,10 +76,11 @@ NAN_METHOD(VmOne::Run) {
         Integer::New(Isolate::GetCurrent(), 0);
 
     VmOne *vmOne = ObjectWrap::Unwrap<VmOne>(info.This());
-    Local<Context> contextLocal = Nan::New(vmOne->context);
+    Local<Context> localContext = Nan::New(vmOne->context);
     Local<Function> handler = Nan::New(vmOne->handler);
 
     {
+      Context::Scope scope(localContext);
       Nan::TryCatch tryCatch;
 
       {
@@ -94,7 +95,7 @@ NAN_METHOD(VmOne::Run) {
         lineOffset,
         colOffset
       );
-      MaybeLocal<Script> scriptMaybe = Script::Compile(contextLocal, src, &scriptOrigin);
+      MaybeLocal<Script> scriptMaybe = Script::Compile(localContext, src, &scriptOrigin);
 
       {
         Local<Value> argv[] = {
@@ -105,10 +106,10 @@ NAN_METHOD(VmOne::Run) {
 
       if (!scriptMaybe.IsEmpty()) {
         Local<Script> script = scriptMaybe.ToLocalChecked();
-        Local<Value> result = script->Run();
+        MaybeLocal<Value> result = script->Run(localContext);
 
         if (!tryCatch.HasCaught()) {
-          info.GetReturnValue().Set(result);
+          info.GetReturnValue().Set(result.ToLocalChecked());
         } else {
           tryCatch.ReThrow();
         }
@@ -134,9 +135,14 @@ VmOne::VmOne(Local<Object> globalInit, Local<Function> handler) {
     Local<Value> value = globalInit->Get(localContext, key).ToLocalChecked();
     contextGlobal->Set(localContext, key, value);
   }
-
+  
+  Local<Context> topContext = Isolate::GetCurrent()->GetCurrentContext();
+  localContext->SetSecurityToken(topContext->GetSecurityToken());
   localContext->AllowCodeGenerationFromStrings(true);
-
+  // ContextEmbedderIndex::kEnvironment = 32
+  Environment *env = (Environment *)topContext->GetAlignedPointerFromEmbedderData(32);
+  localContext->SetAlignedPointerInEmbedderData(32, env);
+  
   context.Reset(localContext);
 }
 VmOne::~VmOne() {}
