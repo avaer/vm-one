@@ -220,6 +220,8 @@ VmOne::VmOne(Local<Object> globalInit, Local<Function> handler) {
   Local<Context> topContext = Isolate::GetCurrent()->GetCurrentContext();
   localContext->SetSecurityToken(topContext->GetSecurityToken());
   localContext->AllowCodeGenerationFromStrings(true);
+  // ContextEmbedderIndex::kAllowWasmCodeGeneration = 34
+  localContext->SetEmbedderData(34, Nan::New<Boolean>(true));
   // ContextEmbedderIndex::kEnvironment = 32
   Environment *env = (Environment *)topContext->GetAlignedPointerFromEmbedderData(32);
   localContext->SetAlignedPointerInEmbedderData(32, env);
