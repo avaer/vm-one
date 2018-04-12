@@ -122,27 +122,108 @@ NAN_METHOD(VmOne::Run) {
   }
 }
 
+void copyObject(Local<Object> src, Local<Object> dst, Local<Context> context) {
+  Local<Array> propertyNames = src->GetPropertyNames(
+    context,
+    KeyCollectionMode::kOwnOnly,
+    PropertyFilter::ALL_PROPERTIES,
+    IndexFilter::kIncludeIndices
+  ).ToLocalChecked();
+  size_t numPropertyNames = propertyNames->Length();
+  for (size_t i = 0; i < numPropertyNames; i++) {
+    Local<Value> key = propertyNames->Get(i);
+
+    MaybeLocal<Value> srcDescriptorMaybe = key->IsName() ? src->GetOwnPropertyDescriptor(context, Local<Name>::Cast(key)) : MaybeLocal<Value>();
+
+    if (!srcDescriptorMaybe.IsEmpty()) {
+      Local<Object> srcDescriptor = Local<Object>::Cast(srcDescriptorMaybe.ToLocalChecked());
+
+      Local<Value> value = srcDescriptor->Get(JS_STR("value"));
+
+      if (value->StrictEquals(src)) {
+        value = dst;
+      }
+
+      Local<Value> get = srcDescriptor->Get(JS_STR("get"));
+      Local<Value> set = srcDescriptor->Get(JS_STR("set"));
+      Local<Value> enumerable = srcDescriptor->Get(JS_STR("enumerable"));
+      Local<Value> configurable = srcDescriptor->Get(JS_STR("configurable"));
+      Local<Value> writable = srcDescriptor->Get(JS_STR("writable"));
+
+      if (!value->IsUndefined()) {
+        if (writable->IsBoolean()) {
+          PropertyDescriptor dstDescriptor(value, writable->BooleanValue());
+
+          if (enumerable->IsBoolean()) {
+            dstDescriptor.set_enumerable(enumerable->BooleanValue());
+          }
+          if (configurable->IsBoolean()) {
+            dstDescriptor.set_configurable(configurable->BooleanValue());
+          }
+
+          dst->DefineProperty(context, Local<Name>::Cast(key), dstDescriptor);
+        } else {
+          PropertyDescriptor dstDescriptor(value);
+
+          if (enumerable->IsBoolean()) {
+            dstDescriptor.set_enumerable(enumerable->BooleanValue());
+          }
+          if (configurable->IsBoolean()) {
+            dstDescriptor.set_configurable(configurable->BooleanValue());
+          }
+
+          dst->DefineProperty(context, Local<Name>::Cast(key), dstDescriptor);
+        }
+      } else if (!get->IsUndefined() || !set->IsUndefined()) {
+        PropertyDescriptor dstDescriptor(get, set);
+
+        if (enumerable->IsBoolean()) {
+          dstDescriptor.set_enumerable(enumerable->BooleanValue());
+        }
+        if (configurable->IsBoolean()) {
+          dstDescriptor.set_configurable(configurable->BooleanValue());
+        }
+
+        dst->DefineProperty(context, Local<Name>::Cast(key), dstDescriptor);
+      } else {
+        PropertyDescriptor dstDescriptor;
+
+        if (enumerable->IsBoolean()) {
+          dstDescriptor.set_enumerable(enumerable->BooleanValue());
+        }
+        if (configurable->IsBoolean()) {
+          dstDescriptor.set_configurable(configurable->BooleanValue());
+        }
+
+        dst->DefineProperty(context, Local<Name>::Cast(key), dstDescriptor);
+      }
+    } else {
+      Local<Value> value = src->Get(key);
+
+      if (value->StrictEquals(src)) {
+        value = dst;
+      }
+
+      dst->Set(context, key, value);
+    }
+  }
+}
+
 VmOne::VmOne(Local<Object> globalInit, Local<Function> handler) {
   this->handler.Reset(handler);
 
   Local<Context> localContext = Context::New(Isolate::GetCurrent());
   Local<Object> contextGlobal = localContext->Global();
 
-  Local<Array> propertyNames = globalInit->GetOwnPropertyNames(localContext).ToLocalChecked();
-  size_t numPropertyNames = propertyNames->Length();
-  for (size_t i = 0; i < numPropertyNames; i++) {
-    Local<String> key = propertyNames->Get(i)->ToString();
-    Local<Value> value = globalInit->Get(localContext, key).ToLocalChecked();
-    contextGlobal->Set(localContext, key, value);
-  }
-  
+  copyObject(globalInit, contextGlobal, localContext);
+
   Local<Context> topContext = Isolate::GetCurrent()->GetCurrentContext();
   localContext->SetSecurityToken(topContext->GetSecurityToken());
   localContext->AllowCodeGenerationFromStrings(true);
   // ContextEmbedderIndex::kEnvironment = 32
   Environment *env = (Environment *)topContext->GetAlignedPointerFromEmbedderData(32);
   localContext->SetAlignedPointerInEmbedderData(32, env);
-  
+
   context.Reset(localContext);
 }
 VmOne::~VmOne() {}
