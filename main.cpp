@@ -18,6 +18,7 @@ class VmOne : public ObjectWrap {
   protected:
     static NAN_METHOD(New);
     static NAN_METHOD(Run);
+    static NAN_METHOD(GetGlobal);
 
     VmOne(Local<Object> globalInit, Local<Function> handler);
     ~VmOne();
@@ -37,6 +38,7 @@ Handle<Object> VmOne::Initialize() {
   // prototype
   Local<ObjectTemplate> proto = ctor->PrototypeTemplate();
   Nan::SetMethod(proto, "run", Run);
+  Nan::SetMethod(proto, "getGlobal", GetGlobal);
 
   Local<Function> ctorFn = ctor->GetFunction();
 
@@ -120,6 +122,14 @@ NAN_METHOD(VmOne::Run) {
   } else {
     Nan::ThrowError("invalid arguments");
   }
+}
+
+NAN_METHOD(VmOne::GetGlobal) {
+  VmOne *vmOne = ObjectWrap::Unwrap<VmOne>(info.This());
+  Local<Context> localContext = Nan::New(vmOne->context);
+  Local<Object> global = localContext->Global();
+  
+  info.GetReturnValue().Set(global);
 }
 
 void copyObject(Local<Object> src, Local<Object> dst, Local<Context> context) {
