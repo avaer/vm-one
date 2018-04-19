@@ -80,6 +80,7 @@ NAN_METHOD(VmOne::Run) {
     VmOne *vmOne = ObjectWrap::Unwrap<VmOne>(info.This());
     Local<Context> localContext = Nan::New(vmOne->context);
     Local<Function> handler = Nan::New(vmOne->handler);
+    Local<Value> exception;
 
     {
       Context::Scope scope(localContext);
@@ -113,11 +114,14 @@ NAN_METHOD(VmOne::Run) {
         if (!tryCatch.HasCaught()) {
           info.GetReturnValue().Set(result.ToLocalChecked());
         } else {
-          tryCatch.ReThrow();
+          exception = tryCatch.Exception();
         }
       } else {
-        tryCatch.ReThrow();
+        exception = tryCatch.Exception();
       }
+    }
+    if (!exception.IsEmpty()) {
+      Nan::ThrowError(exception);
     }
   } else {
     Nan::ThrowError("invalid arguments");
