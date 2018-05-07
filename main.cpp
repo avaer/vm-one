@@ -224,8 +224,6 @@ void copyObject(Local<Object> src, Local<Object> dst, Local<Context> context) {
 }
 
 VmOne::VmOne(Local<Object> globalInit, Local<Function> handler) {
-  this->handler.Reset(handler);
-
   Local<Context> localContext = Context::New(Isolate::GetCurrent());
   Local<Object> contextGlobal = localContext->Global();
 
@@ -240,6 +238,7 @@ VmOne::VmOne(Local<Object> globalInit, Local<Function> handler) {
   Environment *env = (Environment *)topContext->GetAlignedPointerFromEmbedderData(32);
   localContext->SetAlignedPointerInEmbedderData(32, env);
 
+  this->handler.Reset(handler);
   context.Reset(localContext);
 }
 VmOne::~VmOne() {}
