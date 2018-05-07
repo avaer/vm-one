@@ -26,7 +26,7 @@ class VmOne : public ObjectWrap {
     static NAN_METHOD(Run);
     static NAN_METHOD(GetGlobal);
 
-    VmOne(Local<Object> globalInit, Local<Function> handler);
+    VmOne(Local<Object> globalInit, Local<Function> handler, Local<String> dirname);
     ~VmOne();
 
     Environment *env;
@@ -54,13 +54,14 @@ Handle<Object> VmOne::Initialize() {
 }
 
 NAN_METHOD(VmOne::New) {
-  if (info[0]->IsObject() && info[1]->IsFunction()) {
+  if (info[0]->IsObject() && info[1]->IsFunction() && info[2]->IsString()) {
     Local<Object> global = Local<Object>::Cast(info[0]);
     Local<Function> handler = Local<Function>::Cast(info[1]);
+    Local<String> dirname = Local<String>::Cast(info[2]);
 
     Local<Object> vmOneObj = Local<Object>::Cast(info.This());
 
-    VmOne *vmOne = new VmOne(global, handler);
+    VmOne *vmOne = new VmOne(global, handler, dirname);
     vmOne->Wrap(vmOneObj);
 
     info.GetReturnValue().Set(vmOneObj);
@@ -231,7 +232,7 @@ void copyObject(Local<Object> src, Local<Object> dst, Local<Context> context) {
   }
 }
 
-VmOne::VmOne(Local<Object> globalInit, Local<Function> handler) {
+VmOne::VmOne(Local<Object> globalInit, Local<Function> handler, Local<String> dirname) {
   // create context
   Isolate *isolate = Isolate::GetCurrent();
   Local<Context> localContext = Context::New(isolate);
@@ -273,13 +274,16 @@ VmOne::VmOne(Local<Object> globalInit, Local<Function> handler) {
   const char *binPathString = "node";
   strncpy(binPathArg, binPathString, sizeof(argsString) - i);
   i += strlen(binPathString) + 1;
-
+  
   char *jsPathArg = argsString + i;
-  const char *filePath = __FILE__;
-  strncpy(jsPathArg, filePath, sizeof(argsString) - i);
-  i += sizeof(filePath);
+  String::Utf8Value dirnameValue(dirname);
+  std::string dirnameString(*dirnameValue, dirnameValue.length());
+  strncpy(jsPathArg, dirnameString.c_str(), sizeof(argsString) - i);
+  i += dirnameString.length();
+
+  char *jsPathArg2 = argsString + i;
   const char *jsFilePath = "boot.js";
-  strncpy(jsPathArg, jsFilePath, sizeof(argsString) - i);
+  strncpy(jsPathArg2, jsFilePath, sizeof(argsString) - i);
   i += sizeof(jsFilePath);
   
   char *allowNativesSynax = argsString + i;

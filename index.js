@@ -1,3 +1,4 @@
+const path = require('path');
 const {VmOne} = require('./build/Release/vmOne.node');
 
 let compiling = false;
@@ -7,7 +8,7 @@ const make = (globalInit = {}) => new VmOne(globalInit, e => {
   } else if (e === 'compileend') {
     compiling = false;
   }
-});
+}, __dirname + path.sep);
 const isCompiling = () => compiling;
 
 const vmOne = {
