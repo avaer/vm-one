@@ -17,6 +17,8 @@ using namespace node;
 #define JS_BOOL(val) Nan::New<v8::Boolean>(val)
 
 namespace vmone {
+  
+constexpr int numArgs = 3;
 
 class VmOne : public ObjectWrap {
   public:
@@ -31,6 +33,7 @@ class VmOne : public ObjectWrap {
 
     Environment *env;
     char argsString[4096];
+    char *argv[numArgs];
     Nan::Persistent<Context> context;
     Nan::Persistent<Function> handler;
 };
@@ -289,8 +292,10 @@ VmOne::VmOne(Local<Object> globalInit, Local<Function> handler, Local<String> di
   strncpy(allowNativesSynax, "--allow_natives_syntax", sizeof(argsString) - i);
   i += strlen(allowNativesSynax) + 1;
 
-  char *argv[] = {binPathArg, jsPathArg, allowNativesSynax};
-  int argc = sizeof(argv)/sizeof(argv[0]);
+  int argc = numArgs;
+  argv[0] = binPathArg;
+  argv[1] = jsPathArg;
+  argv[2] = allowNativesSynax;
   
   env = CreateEnvironment(isolate_data, localContext, argc, argv, argc, argv);
   LoadEnvironment(env);
