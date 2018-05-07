@@ -248,7 +248,6 @@ VmOne::VmOne(Local<Object> globalInit, Local<Function> handler, Local<String> di
 #if _WIN32    
   HMODULE allowNativesSyntaxHandle = GetModuleHandle(nullptr);
   FARPROC allowNativesSyntaxAddress = GetProcAddress(allowNativesSyntaxHandle, "?FLAG_allow_natives_syntax@internal@v8@@3_NA");
-
 #else
   void *allowNativesSyntaxHandle = dlopen(NULL, RTLD_LAZY);      
   void *allowNativesSyntaxAddress = dlsym(allowNativesSyntaxHandle, "_ZN2v88internal25FLAG_allow_natives_syntaxE");
