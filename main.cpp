@@ -29,6 +29,8 @@ class VmOne : public ObjectWrap {
     VmOne(Local<Object> globalInit, Local<Function> handler);
     ~VmOne();
 
+    Environment *env;
+    char argsString[4096];
     Nan::Persistent<Context> context;
     Nan::Persistent<Function> handler;
 };
@@ -265,31 +267,29 @@ VmOne::VmOne(Local<Object> globalInit, Local<Function> handler) {
   MultiIsolatePlatform *platform = (MultiIsolatePlatform *)GetCurrentPlatform();
   IsolateData *isolate_data = CreateIsolateData(isolate, uv_default_loop(), platform);
   
-  const size_t argsStringLength = 4096;
-  char *argsString = new char[argsStringLength];
   int i = 0;
 
   char *binPathArg = argsString + i;
   const char *binPathString = "node";
-  strncpy(binPathArg, binPathString, argsStringLength - i);
+  strncpy(binPathArg, binPathString, sizeof(argsString) - i);
   i += strlen(binPathString) + 1;
 
   char *jsPathArg = argsString + i;
   const char *filePath = __FILE__;
-  strncpy(jsPathArg, filePath, argsStringLength - i);
+  strncpy(jsPathArg, filePath, sizeof(argsString) - i);
   i += sizeof(filePath);
   const char *jsFilePath = "boot.js";
-  strncpy(jsPathArg, jsFilePath, argsStringLength - i);
+  strncpy(jsPathArg, jsFilePath, sizeof(argsString) - i);
   i += sizeof(jsFilePath);
   
   char *allowNativesSynax = argsString + i;
-  strncpy(allowNativesSynax, "--allow_natives_syntax", argsStringLength - i);
+  strncpy(allowNativesSynax, "--allow_natives_syntax", sizeof(argsString) - i);
   i += strlen(allowNativesSynax) + 1;
 
   char *argv[] = {binPathArg, jsPathArg, allowNativesSynax};
   int argc = sizeof(argv)/sizeof(argv[0]);
   
-  Environment *env = CreateEnvironment(isolate_data, localContext, argc, argv, argc, argv);
+  env = CreateEnvironment(isolate_data, localContext, argc, argv, argc, argv);
   LoadEnvironment(env);
   
   // copyObject(globalInit, contextGlobal, localContext);
@@ -301,7 +301,9 @@ VmOne::VmOne(Local<Object> globalInit, Local<Function> handler) {
   this->handler.Reset(handler);
   context.Reset(localContext);
 }
-VmOne::~VmOne() {}
+VmOne::~VmOne() {
+  FreeEnvironment(env);
+}
 
 void Init(Handle<Object> exports) {
   exports->Set(JS_STR("VmOne"), VmOne::Initialize());
