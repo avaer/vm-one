@@ -244,7 +244,7 @@ VmOne::VmOne(Local<Object> globalInit, Local<Function> handler, Local<String> di
   // ContextEmbedderIndex::kAllowWasmCodeGeneration = 34
   localContext->SetEmbedderData(34, Nan::New<Boolean>(true));
 
-  /* // flag hack
+  // flag hack
 #if _WIN32    
   HMODULE allowNativesSyntaxHandle = GetModuleHandle(nullptr);
   FARPROC allowNativesSyntaxAddress = GetProcAddress(allowNativesSyntaxHandle, "?FLAG_allow_natives_syntax@internal@v8@@3_NA");
@@ -254,7 +254,7 @@ VmOne::VmOne(Local<Object> globalInit, Local<Function> handler, Local<String> di
   void *allowNativesSyntaxAddress = dlsym(allowNativesSyntaxHandle, "_ZN2v88internal25FLAG_allow_natives_syntaxE");
 #endif
   bool *flag = (bool *)allowNativesSyntaxAddress;
-  *flag = true; */
+  *flag = true;
 
   // create new environment  
 #if _WIN32
