@@ -1,6 +1,12 @@
 #include <v8.h>
 #include <nan.h>
 
+#if _WIN32
+#include <Windows.h>
+#else
+#include <dlfcn.h>
+#endif
+
 using namespace v8;
 using namespace node;
 
@@ -224,19 +230,73 @@ void copyObject(Local<Object> src, Local<Object> dst, Local<Context> context) {
 }
 
 VmOne::VmOne(Local<Object> globalInit, Local<Function> handler) {
-  Local<Context> localContext = Context::New(Isolate::GetCurrent());
+  // create context
+  Isolate *isolate = Isolate::GetCurrent();
+  Local<Context> localContext = Context::New(isolate);
   Local<Object> contextGlobal = localContext->Global();
-
-  copyObject(globalInit, contextGlobal, localContext);
 
   Local<Context> topContext = Isolate::GetCurrent()->GetCurrentContext();
   localContext->SetSecurityToken(topContext->GetSecurityToken());
   localContext->AllowCodeGenerationFromStrings(true);
   // ContextEmbedderIndex::kAllowWasmCodeGeneration = 34
   localContext->SetEmbedderData(34, Nan::New<Boolean>(true));
-  // ContextEmbedderIndex::kEnvironment = 32
+
+  /* // flag hack
+#if _WIN32    
+  HMODULE allowNativesSyntaxHandle = GetModuleHandle(nullptr);
+  FARPROC allowNativesSyntaxAddress = GetProcAddress(allowNativesSyntaxHandle, "?FLAG_allow_natives_syntax@internal@v8@@3_NA");
+
+#else
+  void *allowNativesSyntaxHandle = dlopen(NULL, RTLD_LAZY);      
+  void *allowNativesSyntaxAddress = dlsym(allowNativesSyntaxHandle, "_ZN2v88internal25FLAG_allow_natives_syntaxE");
+#endif
+  bool *flag = (bool *)allowNativesSyntaxAddress;
+  *flag = true; */
+
+  // create new environment  
+#if _WIN32
+  HMODULE getCurrentPlatformHandle = GetModuleHandle(nullptr);
+  FARPROC getCurrentPlatformAddress = GetProcAddress(getCurrentPlatformHandle, "?GetCurrentPlatform@V8@internal@v8@@SAPEAVPlatform@3@XZ");
+#else
+  void *getCurrentPlatformHandle = dlopen(NULL, RTLD_LAZY);
+  void *getCurrentPlatformAddress = dlsym(getCurrentPlatformHandle, "_ZN2v88internal2V818GetCurrentPlatformEv");
+#endif
+  Platform *(*GetCurrentPlatform)(void) = (Platform *(*)(void))getCurrentPlatformAddress;
+  MultiIsolatePlatform *platform = (MultiIsolatePlatform *)GetCurrentPlatform();
+  IsolateData *isolate_data = CreateIsolateData(isolate, uv_default_loop(), platform);
+  
+  const size_t argsStringLength = 4096;
+  char *argsString = new char[argsStringLength];
+  int i = 0;
+
+  char *binPathArg = argsString + i;
+  const char *binPathString = "node";
+  strncpy(binPathArg, binPathString, argsStringLength - i);
+  i += strlen(binPathString) + 1;
+
+  char *jsPathArg = argsString + i;
+  const char *filePath = __FILE__;
+  strncpy(jsPathArg, filePath, argsStringLength - i);
+  i += sizeof(filePath);
+  const char *jsFilePath = "boot.js";
+  strncpy(jsPathArg, jsFilePath, argsStringLength - i);
+  i += sizeof(jsFilePath);
+  
+  char *allowNativesSynax = argsString + i;
+  strncpy(allowNativesSynax, "--allow_natives_syntax", argsStringLength - i);
+  i += strlen(allowNativesSynax) + 1;
+
+  char *argv[] = {binPathArg, jsPathArg, allowNativesSynax};
+  int argc = sizeof(argv)/sizeof(argv[0]);
+  
+  Environment *env = CreateEnvironment(isolate_data, localContext, argc, argv, argc, argv);
+  LoadEnvironment(env);
+  
+  // copyObject(globalInit, contextGlobal, localContext);
+ 
+  /* // ContextEmbedderIndex::kEnvironment = 32
   Environment *env = (Environment *)topContext->GetAlignedPointerFromEmbedderData(32);
-  localContext->SetAlignedPointerInEmbedderData(32, env);
+  localContext->SetAlignedPointerInEmbedderData(32, env); */
 
   this->handler.Reset(handler);
   context.Reset(localContext);
