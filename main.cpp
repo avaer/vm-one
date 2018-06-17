@@ -313,8 +313,16 @@ VmOne::~VmOne() {
   FreeEnvironment(env);
 }
 
+NAN_METHOD(SetPrototype) {
+  Local<Object> arg = Local<Object>::Cast(info[0]);
+  Local<Value> prototype = info[1];
+
+  arg->SetPrototype(Isolate::GetCurrent()->GetCurrentContext(), prototype);
+}
+
 void Init(Handle<Object> exports) {
   exports->Set(JS_STR("VmOne"), VmOne::Initialize());
+  Nan::SetMethod(exports, "setPrototype", SetPrototype);
 }
 
 NODE_MODULE(NODE_GYP_MODULE_NAME, Init)
