@@ -17,7 +17,7 @@ using namespace node;
 #define JS_BOOL(val) Nan::New<v8::Boolean>(val)
 
 namespace vmone {
-  
+
 constexpr int numArgs = 3;
 
 class VmOne : public ObjectWrap {
@@ -144,7 +144,7 @@ NAN_METHOD(VmOne::GetGlobal) {
   VmOne *vmOne = ObjectWrap::Unwrap<VmOne>(info.This());
   Local<Context> localContext = Nan::New(vmOne->context);
   Local<Object> global = localContext->Global();
-  
+
   info.GetReturnValue().Set(global);
 }
 
@@ -248,17 +248,17 @@ VmOne::VmOne(Local<Object> globalInit, Local<Function> handler, Local<String> di
   localContext->SetEmbedderData(34, Nan::New<Boolean>(true));
 
   // flag hack
-#if _WIN32    
+#if _WIN32
   HMODULE allowNativesSyntaxHandle = GetModuleHandle(nullptr);
   FARPROC allowNativesSyntaxAddress = GetProcAddress(allowNativesSyntaxHandle, "?FLAG_allow_natives_syntax@internal@v8@@3_NA");
 #else
-  void *allowNativesSyntaxHandle = dlopen(NULL, RTLD_LAZY);      
+  void *allowNativesSyntaxHandle = dlopen(NULL, RTLD_LAZY);
   void *allowNativesSyntaxAddress = dlsym(allowNativesSyntaxHandle, "_ZN2v88internal25FLAG_allow_natives_syntaxE");
 #endif
   bool *flag = (bool *)allowNativesSyntaxAddress;
   *flag = true;
 
-  // create new environment  
+  // create new environment
 #if _WIN32
   HMODULE getCurrentPlatformHandle = GetModuleHandle(nullptr);
   FARPROC getCurrentPlatformAddress = GetProcAddress(getCurrentPlatformHandle, "?GetCurrentPlatform@V8@internal@v8@@SAPEAVPlatform@3@XZ");
@@ -269,14 +269,14 @@ VmOne::VmOne(Local<Object> globalInit, Local<Function> handler, Local<String> di
   Platform *(*GetCurrentPlatform)(void) = (Platform *(*)(void))getCurrentPlatformAddress;
   MultiIsolatePlatform *platform = (MultiIsolatePlatform *)GetCurrentPlatform();
   IsolateData *isolate_data = CreateIsolateData(isolate, uv_default_loop(), platform);
-  
+
   int i = 0;
 
   char *binPathArg = argsString + i;
   const char *binPathString = "node";
   strncpy(binPathArg, binPathString, sizeof(argsString) - i);
   i += strlen(binPathString) + 1;
-  
+
   char *jsPathArg = argsString + i;
   String::Utf8Value dirnameValue(dirname);
   std::string dirnameString(*dirnameValue, dirnameValue.length());
@@ -287,7 +287,7 @@ VmOne::VmOne(Local<Object> globalInit, Local<Function> handler, Local<String> di
   const char *jsFilePath = "boot.js";
   strncpy(jsPathArg2, jsFilePath, sizeof(argsString) - i);
   i += sizeof(jsFilePath);
-  
+
   char *allowNativesSynax = argsString + i;
   strncpy(allowNativesSynax, "--allow_natives_syntax", sizeof(argsString) - i);
   i += strlen(allowNativesSynax) + 1;
@@ -296,12 +296,12 @@ VmOne::VmOne(Local<Object> globalInit, Local<Function> handler, Local<String> di
   argv[0] = binPathArg;
   argv[1] = jsPathArg;
   argv[2] = allowNativesSynax;
-  
+
   env = CreateEnvironment(isolate_data, localContext, argc, argv, argc, argv);
   LoadEnvironment(env);
-  
+
   // copyObject(globalInit, contextGlobal, localContext);
- 
+
   /* // ContextEmbedderIndex::kEnvironment = 32
   Environment *env = (Environment *)topContext->GetAlignedPointerFromEmbedderData(32);
   localContext->SetAlignedPointerInEmbedderData(32, env); */
