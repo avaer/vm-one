@@ -9,7 +9,7 @@
         "<!(node -e \"require('nan')\")"
       ],
       'conditions': [
-        ['"<!(echo $LUMIN)"!=""', {
+        ['"<!(echo $LUMIN)"=="1"', {
           'defines': ['LUMIN'],
         }],
       ],
