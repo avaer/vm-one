@@ -8,6 +8,11 @@
       "include_dirs": [
         "<!(node -e \"require('nan')\")"
       ],
+      'conditions': [
+        ['LUMIN=="true"', {
+          'defines': ['LUMIN'],
+        }],
+      ],
     },
   ],
 }

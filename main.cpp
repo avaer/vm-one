@@ -325,6 +325,14 @@ void Init(Handle<Object> exports) {
   Nan::SetMethod(exports, "setPrototype", SetPrototype);
 }
 
-NODE_MODULE(NODE_GYP_MODULE_NAME, Init)
-
 }
+
+#ifndef LUMIN
+NODE_MODULE(NODE_GYP_MODULE_NAME, vmone::Init)
+#else
+extern "C" {
+  void node_register_module_vm_one(Local<Object> exports, Local<Value> module, Local<Context> context) {
+    vmone::Init(exports);
+  }
+}
+#endif
