@@ -1,7 +1,7 @@
 {
   'targets': [
     {
-      'target_name': 'vmOne',
+      'target_name': 'vm_one',
       'sources': [
         'main.cpp',
       ],

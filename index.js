@@ -1,5 +1,5 @@
 const path = require('path');
-const {VmOne, setPrototype} = require('./build/Release/vmOne.node');
+const {VmOne, setPrototype} = require('./build/Release/vm_one.node');
 
 let compiling = false;
 const make = (globalInit = {}) => new VmOne(globalInit, e => {
