@@ -22,7 +22,6 @@ class VmOne : public ObjectWrap {
   public:
     static Handle<Object> Initialize();
   protected:
-    static Local<Object> New(Local<Function> handler, Local<String> dirname);
     static NAN_METHOD(New);
     static NAN_METHOD(Run);
     static NAN_METHOD(GetGlobal);
