@@ -20,17 +20,21 @@ Handle<Object> VmOne::Initialize() {
   return scope.Escape(ctorFn);
 }
 
+Local<Object> VmOne::New(Local<Function> handler, Local<String> dirname) {
+  Local<Object> vmOneObj = Nan::New<Object>();
+
+  VmOne *vmOne = new VmOne(handler, dirname);
+  vmOne->Wrap(vmOneObj);
+
+  return vmOneObj;
+}
+
 NAN_METHOD(VmOne::New) {
-  if (/*info[0]->IsObject() && */info[0]->IsFunction() && info[1]->IsString()) {
-    // Local<Object> global = Local<Object>::Cast(info[0]);
+  if (info[0]->IsFunction() && info[1]->IsString()) {
     Local<Function> handler = Local<Function>::Cast(info[0]);
     Local<String> dirname = Local<String>::Cast(info[1]);
 
-    Local<Object> vmOneObj = Local<Object>::Cast(info.This());
-
-    VmOne *vmOne = new VmOne(/* global, */handler, dirname);
-    vmOne->Wrap(vmOneObj);
-
+    Local<Object> vmOneObj = VmOne::New(handler, dirname);
     info.GetReturnValue().Set(vmOneObj);
   } else {
     Nan::ThrowError("invalid arguments");
