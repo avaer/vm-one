@@ -28,7 +28,7 @@ class VmOne : public ObjectWrap {
     static NAN_METHOD(Run);
     static NAN_METHOD(GetGlobal);
 
-    VmOne(Local<Object> globalInit, Local<Function> handler, Local<String> dirname);
+    VmOne(/* Local<Object> globalInit, */Local<Function> handler, Local<String> dirname);
     ~VmOne();
 
     Environment *env;
@@ -235,7 +235,7 @@ void copyObject(Local<Object> src, Local<Object> dst, Local<Context> context) {
   }
 }
 
-VmOne::VmOne(Local<Object> globalInit, Local<Function> handler, Local<String> dirname) {
+VmOne::VmOne(/* Local<Object> globalInit, */Local<Function> handler, Local<String> dirname) {
   // create context
   Isolate *isolate = Isolate::GetCurrent();
   Local<Context> localContext = Context::New(isolate);
