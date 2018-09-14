@@ -57,14 +57,14 @@ Handle<Object> VmOne::Initialize() {
 }
 
 NAN_METHOD(VmOne::New) {
-  if (info[0]->IsObject() && info[1]->IsFunction() && info[2]->IsString()) {
-    Local<Object> global = Local<Object>::Cast(info[0]);
-    Local<Function> handler = Local<Function>::Cast(info[1]);
-    Local<String> dirname = Local<String>::Cast(info[2]);
+  if (/*info[0]->IsObject() && */info[0]->IsFunction() && info[1]->IsString()) {
+    // Local<Object> global = Local<Object>::Cast(info[0]);
+    Local<Function> handler = Local<Function>::Cast(info[0]);
+    Local<String> dirname = Local<String>::Cast(info[1]);
 
     Local<Object> vmOneObj = Local<Object>::Cast(info.This());
 
-    VmOne *vmOne = new VmOne(global, handler, dirname);
+    VmOne *vmOne = new VmOne(/* global, */handler, dirname);
     vmOne->Wrap(vmOneObj);
 
     info.GetReturnValue().Set(vmOneObj);
