@@ -1,6 +1,6 @@
 {
   "name": "vm-one",
-  "version": "0.0.19",
+  "version": "0.0.20",
   "description": "Node.js V8 one way VM",
   "main": "index.js",
   "scripts": {
