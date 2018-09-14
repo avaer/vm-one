@@ -91,14 +91,17 @@ NAN_METHOD(VmOne::Run) {
 
     VmOne *vmOne = ObjectWrap::Unwrap<VmOne>(info.This());
     Local<Context> localContext = Nan::New(vmOne->context);
-    Local<Function> handler = Nan::New(vmOne->handler);
+    Local<Function> handler;
+    if (!vmOne->handler.IsEmpty()) {
+      handler = Nan::New(vmOne->handler);
+    }
     Local<Value> exception;
 
     {
       Context::Scope scope(localContext);
       Nan::TryCatch tryCatch;
 
-      {
+      if (!handler.IsEmpty()) {
         Local<Value> argv[] = {
           JS_STR("compilestart"),
         };
@@ -112,7 +115,7 @@ NAN_METHOD(VmOne::Run) {
       );
       MaybeLocal<Script> scriptMaybe = Script::Compile(localContext, src, &scriptOrigin);
 
-      {
+      if (!handler.IsEmpty()) {
         Local<Value> argv[] = {
           JS_STR("compileend"),
         };
@@ -306,7 +309,9 @@ VmOne::VmOne(/* Local<Object> globalInit, */Local<Function> handler, Local<Strin
   Environment *env = (Environment *)topContext->GetAlignedPointerFromEmbedderData(32);
   localContext->SetAlignedPointerInEmbedderData(32, env); */
 
-  this->handler.Reset(handler);
+  if (!handler.IsEmpty()) {
+    this->handler.Reset(handler);
+  }
   context.Reset(localContext);
 }
 VmOne::~VmOne() {
