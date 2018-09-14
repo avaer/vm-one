@@ -3,7 +3,7 @@
     {
       'target_name': 'vm_one',
       'sources': [
-        'main.cpp',
+        'src/main.cpp',
         'src/vm.cpp',
       ],
       "include_dirs": [
