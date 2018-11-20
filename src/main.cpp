@@ -29,18 +29,19 @@ public:
   static NAN_METHOD(Request);
   static NAN_METHOD(Respond);
 
-  VmOne(VmOne *oldVmOne = nullptr);
+  VmOne(VmOne *ovmo = nullptr);
   ~VmOne();
 
   static void RunInThread(uv_async_t *handle);
 
 // protected:
-  Nan::Persistent<Value> *global;
+  Nan::Persistent<Value> global;
+  Nan::Persistent<Value> securityToken;
   uv_async_t *async;
   uv_sem_t *lockRequestSem;
   uv_sem_t *lockResponseSem;
   uv_sem_t *requestSem;
-  bool owner;
+  VmOne *oldVmOne;
 };
 
 thread_local VmOne *threadVmOne = nullptr;
@@ -56,11 +57,11 @@ Handle<Object> VmOne::Initialize() {
 
   // prototype
   Local<ObjectTemplate> proto = ctor->PrototypeTemplate();
-  Nan::SetMethod(proto, "getGlobal", GetGlobal);
-  Nan::SetMethod(proto, "setGlobal", SetGlobal);
   Nan::SetMethod(proto, "toArray", ToArray);
   Nan::SetMethod(proto, "lock", Lock);
   Nan::SetMethod(proto, "unlock", Unlock);
+  Nan::SetMethod(proto, "setGlobal", SetGlobal);
+  Nan::SetMethod(proto, "getGlobal", GetGlobal);
   Nan::SetMethod(proto, "request", Request);
   Nan::SetMethod(proto, "respond", Respond);
 
@@ -104,17 +105,6 @@ NAN_METHOD(VmOne::New) {
   info.GetReturnValue().Set(vmOneObj);
 }
 
-NAN_METHOD(VmOne::GetGlobal) {
-  VmOne *vmOne = ObjectWrap::Unwrap<VmOne>(info.This());
-  Local<Value> globalValue = Nan::New(*vmOne->global);
-  info.GetReturnValue().Set(globalValue);
-}
-
-NAN_METHOD(VmOne::SetGlobal) {
-  VmOne *vmOne = ObjectWrap::Unwrap<VmOne>(info.This());
-  vmOne->global->Reset(info[0]);
-}
-
 NAN_METHOD(VmOne::FromArray) {
   Local<Array> array = Local<Array>::Cast(info[0]);
 
@@ -137,11 +127,11 @@ NAN_METHOD(VmOne::ToArray) {
   info.GetReturnValue().Set(array);
 }
 
-VmOne::VmOne(VmOne *oldVmOne) {
-  if (!oldVmOne) {
-    global = new Nan::Persistent<Value>();
-    async = new uv_async_t();
-    uv_async_init(uv_default_loop(), async, RunInThread);
+VmOne::VmOne(VmOne *ovmo) {
+  if (!ovmo) {
+    securityToken.Reset(Isolate::GetCurrent()->GetCurrentContext()->GetSecurityToken());
+
+    async = nullptr;
     lockRequestSem = new uv_sem_t();
     uv_sem_init(lockRequestSem, 0);
     lockResponseSem = new uv_sem_t();
@@ -149,15 +139,22 @@ VmOne::VmOne(VmOne *oldVmOne) {
     requestSem = new uv_sem_t();
     uv_sem_init(requestSem, 0);
     std::cout << "init parent with request sem" << (void *)requestSem << std::endl;
-    owner = true;
   } else {
-    global = oldVmOne->global;
-    async = oldVmOne->async;
-    lockRequestSem = oldVmOne->lockRequestSem;
-    lockResponseSem = oldVmOne->lockResponseSem;
-    requestSem = oldVmOne->requestSem;
+    Local<Value> oldSecurityToken = Nan::New(ovmo->securityToken);
+    Local<Context> localContext = Isolate::GetCurrent()->GetCurrentContext();
+
+    localContext->SetSecurityToken(oldSecurityToken);
+    localContext->AllowCodeGenerationFromStrings(true);
+    // ContextEmbedderIndex::kAllowWasmCodeGeneration = 34
+    localContext->SetEmbedderData(34, Nan::New<Boolean>(true));
+
+    async = ovmo->async = new uv_async_t();
+    uv_async_init(uv_default_loop(), async, RunInThread);
+    lockRequestSem = ovmo->lockRequestSem;
+    lockResponseSem = ovmo->lockResponseSem;
+    requestSem = ovmo->requestSem;
     std::cout << "init child with request sem" << (void *)requestSem << std::endl;
-    owner = false;
+    oldVmOne = ovmo;
   }
 }
 
@@ -177,22 +174,69 @@ VmOne::~VmOne() {
 void VmOne::RunInThread(uv_async_t *handle) {
   Nan::HandleScope scope;
 
+  std::cout << "run in thread 1" << std::endl;
   VmOne *vmOne = threadVmOne;
+  vmOne->oldVmOne->global.Reset(Isolate::GetCurrent()->GetCurrentContext()->Global());
   uv_sem_post(threadVmOne->lockRequestSem);
+
+  std::cout << "run in thread 2" << std::endl;
+
   uv_sem_wait(threadVmOne->lockResponseSem);
+
+  std::cout << "run in thread 3" << std::endl;
+
+  vmOne->oldVmOne->global.Reset();
+
+  std::cout << "run in thread 4" << std::endl;
 }
 
 NAN_METHOD(VmOne::Lock) {
   VmOne *vmOne = ObjectWrap::Unwrap<VmOne>(info.This());
 
-  uv_async_send(vmOne->async);
-  uv_sem_wait(vmOne->lockRequestSem);
+  std::cout << "lock 1 " << (void *)vmOne->async << std::endl;
+  // uv_async_send(vmOne->async);
+  std::cout << "lock 2 " << (void *)vmOne->lockRequestSem << std::endl;
+  // uv_sem_wait(vmOne->lockRequestSem);
+  std::cout << "lock 3" << std::endl;
 }
 
 NAN_METHOD(VmOne::Unlock) {
   VmOne *vmOne = ObjectWrap::Unwrap<VmOne>(info.This());
 
+  // uv_sem_post(vmOne->lockResponseSem);
+}
+
+NAN_METHOD(VmOne::SetGlobal) {
+  // VmOne *vmOne = ObjectWrap::Unwrap<VmOne>(info.This());
+  // vmOne->global.Reset(Isolate::GetCurrent()->GetCurrentContext()->Global());
+}
+
+NAN_METHOD(VmOne::GetGlobal) {
+  VmOne *vmOne = ObjectWrap::Unwrap<VmOne>(info.This());
+  Local<Function> cb = Local<Function>::Cast(info[0]);
+
+  std::cout << "lock 1" << std::endl;
+
+  uv_async_send(vmOne->async);
+  std::cout << "lock 2" << std::endl;
+  uv_sem_wait(vmOne->lockRequestSem);
+
+  std::cout << "lock 3" << std::endl;
+
+  {
+    HanldeScope scope;
+
+    Local<Value> argv[] = {
+      Nan::New(vmOne->global),
+    };
+    cb->Call(Nan::Null(), sizeof(argv)/sizeof(argv[0]), argv);
+  }
+
+  std::cout << "lock 4" << std::endl;
+
   uv_sem_post(vmOne->lockResponseSem);
+
+  std::cout << "lock 5 " << std::endl;
 }
 
 NAN_METHOD(VmOne::Request) {
