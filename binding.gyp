@@ -14,9 +14,6 @@
         ['"<!(echo $LUMIN)"=="1"', {
           'defines': ['LUMIN'],
         }],
-        ['"<!(echo $ANDROID)"=="1"', {
-          'defines': ['ANDROID'],
-        }],
       ],
     },
   ],
