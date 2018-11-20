@@ -24,8 +24,6 @@ public:
   static NAN_METHOD(GetGlobal);
   static NAN_METHOD(FromArray);
   static NAN_METHOD(ToArray);
-  static NAN_METHOD(Lock);
-  static NAN_METHOD(Unlock);
   static NAN_METHOD(Request);
   static NAN_METHOD(Respond);
   static NAN_METHOD(HandleRunInThread);
@@ -59,8 +57,6 @@ Handle<Object> VmOne::Initialize() {
   // prototype
   Local<ObjectTemplate> proto = ctor->PrototypeTemplate();
   Nan::SetMethod(proto, "toArray", ToArray);
-  Nan::SetMethod(proto, "lock", Lock);
-  Nan::SetMethod(proto, "unlock", Unlock);
   Nan::SetMethod(proto, "setGlobal", SetGlobal);
   Nan::SetMethod(proto, "getGlobal", GetGlobal);
   Nan::SetMethod(proto, "request", Request);
@@ -189,19 +185,6 @@ void VmOne::RunInThread(uv_async_t *handle) {
   uv_sem_wait(threadVmOne->lockResponseSem);
 
   vmOne->oldVmOne->global.Reset();
-}
-
-NAN_METHOD(VmOne::Lock) {
-  VmOne *vmOne = ObjectWrap::Unwrap<VmOne>(info.This());
-
-  // uv_async_send(vmOne->async);
-  // uv_sem_wait(vmOne->lockRequestSem);
-}
-
-NAN_METHOD(VmOne::Unlock) {
-  VmOne *vmOne = ObjectWrap::Unwrap<VmOne>(info.This());
-
-  // uv_sem_post(vmOne->lockResponseSem);
 }
 
 NAN_METHOD(VmOne::SetGlobal) {
