@@ -7,27 +7,10 @@ const nativeVmOne = (() => {
   return exports.VmOne;
 })();
 
-console.log('from array', workerData.array);
 const vmOne = nativeVmOne.fromArray(workerData.array);
-console.log('boot 1');
-// vmOne.setGlobal();
-console.log('boot 2');
 vmOne.respond();
-console.log('boot 3');
 parentPort.on('message', m => {
-  console.log('got message 1');
-
   vmOne.handleRunInThread();
-
-  console.log('got message 2');
-  /* try {
-    eval(m.code);
-  } catch(err) {
-    console.warn(err.stack);
-  }
-  if (m.request) {
-    vmOne.respond();
-  } */
 });
 
 console.log('boot 4');
@@ -35,5 +18,3 @@ console.log('boot 4');
 setInterval(() => {
   console.log('child interval');
 }, 200);
-
-// global.require = require;
