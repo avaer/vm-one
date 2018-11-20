@@ -4,7 +4,7 @@ fs.tainted = true;
 const vmOne = require('.');
 
 const v = vmOne.make();
-const g = v.getGlobal();
+/* const g = v.getGlobal();
 g.lol = 'zol';
 g.callback = object => {
   console.log('check 3', object, !(object instanceof Object));
@@ -17,4 +17,4 @@ const result = v.run(`
   console.log('check 2', fs.readFileSync('./boot.js').buffer instanceof ArrayBuffer);
   callback({});
 `);
-
+*/
