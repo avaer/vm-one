@@ -47,8 +47,6 @@ const vmOne = {
   fromArray(arg) {
     return new VmOne(arg);
   },
-  // make,
-  // isCompiling,
 }
 
 module.exports = vmOne;
