@@ -15,14 +15,19 @@ console.log('boot 2');
 vmOne.respond();
 console.log('boot 3');
 parentPort.on('message', m => {
-  try {
+  console.log('got message 1');
+
+  vmOne.handleRunInThread();
+
+  console.log('got message 2');
+  /* try {
     eval(m.code);
   } catch(err) {
     console.warn(err.stack);
   }
   if (m.request) {
     vmOne.respond();
-  }
+  } */
 });
 
 console.log('boot 4');

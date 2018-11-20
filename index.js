@@ -40,6 +40,7 @@ const vmOne = {
         request: false,
       });
     };
+    vmOne.postMessage = (m, transferList) => worker.postMessage(m, transferList);
 
     return vmOne;
   },

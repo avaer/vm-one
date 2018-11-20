@@ -28,6 +28,7 @@ public:
   static NAN_METHOD(Unlock);
   static NAN_METHOD(Request);
   static NAN_METHOD(Respond);
+  static NAN_METHOD(HandleRunInThread);
 
   VmOne(VmOne *ovmo = nullptr);
   ~VmOne();
@@ -64,6 +65,7 @@ Handle<Object> VmOne::Initialize() {
   Nan::SetMethod(proto, "getGlobal", GetGlobal);
   Nan::SetMethod(proto, "request", Request);
   Nan::SetMethod(proto, "respond", Respond);
+  Nan::SetMethod(proto, "handleRunInThread", HandleRunInThread);
 
   Local<Function> ctorFn = ctor->GetFunction();
 
@@ -159,7 +161,7 @@ VmOne::VmOne(VmOne *ovmo) {
 }
 
 VmOne::~VmOne() {
-  if (owner) {
+  if (!oldVmOne) {
     uv_close((uv_handle_t *)async, nullptr);
     delete async;
     uv_sem_destroy(lockRequestSem);
@@ -169,6 +171,25 @@ VmOne::~VmOne() {
     uv_sem_destroy(requestSem);
     delete requestSem;
   }
+}
+
+NAN_METHOD(VmOne::HandleRunInThread) {
+  std::cout << "run in thread 1" << std::endl;
+  VmOne *vmOne = ObjectWrap::Unwrap<VmOne>(info.This());
+  std::cout << "run in thread 2" << std::endl;
+  vmOne->oldVmOne->global.Reset(Isolate::GetCurrent()->GetCurrentContext()->Global());
+  std::cout << "run in thread 3 " << (void *)vmOne->lockRequestSem << std::endl;
+  uv_sem_post(vmOne->lockRequestSem);
+
+  std::cout << "run in thread 4" << std::endl;
+
+  uv_sem_wait(vmOne->lockResponseSem);
+
+  std::cout << "run in thread 5" << std::endl;
+
+  vmOne->oldVmOne->global.Reset();
+
+  std::cout << "run in thread 6" << std::endl;
 }
 
 void VmOne::RunInThread(uv_async_t *handle) {
@@ -215,16 +236,23 @@ NAN_METHOD(VmOne::GetGlobal) {
   VmOne *vmOne = ObjectWrap::Unwrap<VmOne>(info.This());
   Local<Function> cb = Local<Function>::Cast(info[0]);
 
+  {
+    Nan::HandleScope scope;
+
+    Local<Function> postMessageFn = Local<Function>::Cast(info.This()->Get(JS_STR("postMessage")));
+    postMessageFn->Call(Nan::Null(), 0, nullptr);
+  }
+
   std::cout << "lock 1" << std::endl;
 
-  uv_async_send(vmOne->async);
+  // uv_async_send(vmOne->async);
   std::cout << "lock 2" << std::endl;
   uv_sem_wait(vmOne->lockRequestSem);
 
   std::cout << "lock 3" << std::endl;
 
   {
-    HanldeScope scope;
+    Nan::HandleScope scope;
 
     Local<Value> argv[] = {
       Nan::New(vmOne->global),

@@ -5,9 +5,13 @@ const vmOne = require('.');
 
 const v = vmOne.make();
 setTimeout(() => {
-  v.lock();
-  const g = v.getGlobal();
-  console.log('got global 1', Object.keys(g));
+  // v.lock();
+  console.log('timeout 1');
+  console.log('timeout 2');
+  const g = v.getGlobal(g => {
+    console.log('got global', Object.keys(g));
+  });
+  console.log('timeout 3');
   // console.log('got global 2');
 }, 1000);
 /* g.lol = 'zol';
