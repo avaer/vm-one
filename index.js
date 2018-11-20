@@ -18,12 +18,13 @@ const vmOne = {
 
     const worker = new Worker(path.join(__dirname, 'boot.js'), {
       workerData: {
-        address: vmOne.toArray(),
+        initFnAddress: nativeVmOne.initFnAddress,
+        array: vmOne.toArray(),
       },
     });
 
     console.log('request 1');
-    // vmOne.request();
+    vmOne.request();
     console.log('request 2');
 
     vmOne.runSync = code => {
