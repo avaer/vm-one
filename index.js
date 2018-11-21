@@ -2,6 +2,7 @@ const path = require('path');
 const {Worker} = require('worker_threads');
 const {VmOne: nativeVmOne} = require(path.join(__dirname, 'build', 'Release', 'vm_one.node'));
 const vmOne2SoPath = require.resolve(path.join(__dirname, 'build', 'Release', 'vm_one2.node'));
+const childJsPath = path.join(__dirname, 'child.js');
 
 /* let compiling = false;
 const make = () => new VmOne(e => {
@@ -17,7 +18,7 @@ const vmOne = {
   make() {
     const vmOne = new nativeVmOne();
 
-    const worker = new Worker(path.join(__dirname, 'boot.js'), {
+    const worker = new Worker(childJsPath, {
       workerData: {
         initFnAddress: nativeVmOne.initFnAddress,
         array: vmOne.toArray(),
