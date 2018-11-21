@@ -21,7 +21,6 @@ public:
   static Handle<Object> Initialize();
 // protected:
   static NAN_METHOD(New);
-  static NAN_METHOD(SetGlobal);
   static NAN_METHOD(GetGlobal);
   static NAN_METHOD(FromArray);
   static NAN_METHOD(ToArray);
@@ -58,7 +57,6 @@ Handle<Object> VmOne::Initialize() {
   // prototype
   Local<ObjectTemplate> proto = ctor->PrototypeTemplate();
   Nan::SetMethod(proto, "toArray", ToArray);
-  Nan::SetMethod(proto, "setGlobal", SetGlobal);
   Nan::SetMethod(proto, "getGlobal", GetGlobal);
   Nan::SetMethod(proto, "request", Request);
   Nan::SetMethod(proto, "respond", Respond);
@@ -196,11 +194,6 @@ void VmOne::RunInThread(uv_async_t *handle) {
   uv_sem_wait(threadVmOne->lockResponseSem);
 
   vmOne->oldVmOne->global.Reset();
-}
-
-NAN_METHOD(VmOne::SetGlobal) {
-  // VmOne *vmOne = ObjectWrap::Unwrap<VmOne>(info.This());
-  // vmOne->global.Reset(Isolate::GetCurrent()->GetCurrentContext()->Global());
 }
 
 NAN_METHOD(VmOne::GetGlobal) {
