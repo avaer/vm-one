@@ -48,7 +48,7 @@ NODE_MODULE(NODE_GYP_MODULE_NAME, vmone2::Init)
 #else
 extern "C" {
   void node_register_module_vm_one2(Local<Object> exports, Local<Value> module, Local<Context> context) {
-    vmone::Init(exports);
+    vmone2::Init(exports);
   }
 }
 #endif
