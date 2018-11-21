@@ -36,7 +36,6 @@ public:
 // protected:
   Nan::Persistent<Value> global;
   Nan::Persistent<Value> securityToken;
-  uv_async_t *async;
   uv_sem_t *lockRequestSem;
   uv_sem_t *lockResponseSem;
   uv_sem_t *requestSem;
@@ -127,7 +126,6 @@ VmOne::VmOne(VmOne *ovmo) {
   if (!ovmo) {
     securityToken.Reset(Isolate::GetCurrent()->GetCurrentContext()->GetSecurityToken());
 
-    async = nullptr;
     lockRequestSem = new uv_sem_t();
     uv_sem_init(lockRequestSem, 0);
     lockResponseSem = new uv_sem_t();
@@ -143,8 +141,6 @@ VmOne::VmOne(VmOne *ovmo) {
     // ContextEmbedderIndex::kAllowWasmCodeGeneration = 34
     localContext->SetEmbedderData(34, Nan::New<Boolean>(true));
 
-    async = ovmo->async = new uv_async_t();
-    uv_async_init(uv_default_loop(), async, RunInThread);
     lockRequestSem = ovmo->lockRequestSem;
     lockResponseSem = ovmo->lockResponseSem;
     requestSem = ovmo->requestSem;
@@ -154,8 +150,6 @@ VmOne::VmOne(VmOne *ovmo) {
 
 VmOne::~VmOne() {
   if (!oldVmOne) {
-    uv_close((uv_handle_t *)async, nullptr);
-    delete async;
     uv_sem_destroy(lockRequestSem);
     delete lockRequestSem;
     uv_sem_destroy(lockResponseSem);
