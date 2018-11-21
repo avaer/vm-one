@@ -2,6 +2,7 @@
 #include <uv.h>
 #include <nan.h>
 
+#include <dlfcn.h>
 #include <iostream>
 
 using namespace v8;
@@ -24,6 +25,7 @@ public:
   static NAN_METHOD(GetGlobal);
   static NAN_METHOD(FromArray);
   static NAN_METHOD(ToArray);
+  static NAN_METHOD(Dlclose);
   static NAN_METHOD(Request);
   static NAN_METHOD(Respond);
   static NAN_METHOD(HandleRunInThread);
@@ -63,9 +65,8 @@ Handle<Object> VmOne::Initialize() {
   Nan::SetMethod(proto, "handleRunInThread", HandleRunInThread);
 
   Local<Function> ctorFn = ctor->GetFunction();
-
-  Local<Function> fromArrayFn = Nan::New<Function>(FromArray);
-  ctorFn->Set(JS_STR("fromArray"), fromArrayFn);
+  ctorFn->Set(JS_STR("fromArray"), Nan::New<Function>(FromArray));
+  ctorFn->Set(JS_STR("dlclose"), Nan::New<Function>(Dlclose));
 
   uintptr_t initFnAddress = (uintptr_t)vmone::Init;
   Local<Array> initFnAddressArray = Nan::New<Array>(2);
@@ -120,6 +121,22 @@ NAN_METHOD(VmOne::ToArray) {
   array->Set(1, Nan::New<Integer>((uint32_t)((uintptr_t)vmOne & 0xFFFFFFFF)));
 
   info.GetReturnValue().Set(array);
+}
+
+NAN_METHOD(VmOne::Dlclose) {
+  if (info[0]->IsString()) {
+    Local<String> soPathString = Local<String>::Cast(info[0]);
+    String::Utf8Value soPathUtf8Value(soPathString);
+    void *handle = dlopen(*soPathUtf8Value, RTLD_LAZY);
+
+    if (handle) {
+      while (dlclose(handle) == 0) {}
+    } else {
+      Nan::ThrowError("Dlclose: failed to open handle to close");
+    }
+  } else {
+    Nan::ThrowError("Dlclose: invalid arguments");
+  }
 }
 
 VmOne::VmOne(VmOne *ovmo) {

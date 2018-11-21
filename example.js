@@ -1,29 +1,20 @@
 const fs = require('fs');
-fs.tainted = true;
 
 const vmOne = require('.');
 
-const v = vmOne.make();
-setTimeout(() => {
-  // v.lock();
-  console.log('timeout 1');
-  console.log('timeout 2');
-  const g = v.getGlobal(g => {
-    console.log('got global', Object.keys(g));
-  });
-  console.log('timeout 3');
-  // console.log('got global 2');
-}, 1000);
-/* g.lol = 'zol';
-g.callback = object => {
-  console.log('check 3', object, !(object instanceof Object));
-};
+const v1 = vmOne.make();
+console.log('example 1');
+v1.getGlobal(g => {
+  console.log('example 2', Object.keys(g));
+});
+console.log('example 3');
 
-const result = v.run(`
-  const fs = require('fs');
-  console.log('check 0', lol === 'zol');
-  console.log('check 1', fs.tainted === undefined);
-  console.log('check 2', fs.readFileSync('./boot.js').buffer instanceof ArrayBuffer);
-  callback({});
-`);
-*/
+const p = require.resolve('./build/Release/vm_one2.node');
+vmOne.dlclose(p);
+const vm_one2 = require(p);
+
+/* const v2 = vmOne.make();
+console.log('timeout 2');
+v2.getGlobal(g => {
+  console.log('got global', Object.keys(g));
+}); */
