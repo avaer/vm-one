@@ -247,7 +247,12 @@ NAN_METHOD(VmOne::GetGlobal) {
     Nan::HandleScope scope;
 
     Local<Function> postMessageFn = Local<Function>::Cast(info.This()->Get(JS_STR("postMessage")));
-    postMessageFn->Call(Nan::Null(), 0, nullptr);
+    Local<Object> messageObj = Nan::New<Object>();
+    messageObj->Set(JS_STR("method"), JS_STR("lock"));
+    Local<Value> argv[] = {
+      messageObj,
+    };
+    postMessageFn->Call(Nan::Null(), sizeof(argv)/sizeof(argv[0]), argv);
   }
 
   uv_sem_wait(vmOne->lockRequestSem);
