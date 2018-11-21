@@ -1,9 +1,16 @@
+const path = require('path');
 const {workerData, parentPort} = require('worker_threads');
-const childVmOne = require('./build/Release/vm_one2.node');
+
+// console.log('child require cache', Object.keys(require.cache));
 
 const nativeVmOne = (() => {
   const exports = {};
+
+  const childVmOneSoPath = require.resolve(path.join(__dirname, 'build', 'Release', 'vm_one2.node'));
+  const childVmOne = require(childVmOneSoPath);
   childVmOne.initChild(workerData.initFnAddress, exports);
+  delete require.cache[childVmOneSoPath]; // cannot be reused
+
   return exports.VmOne;
 })();
 
@@ -12,8 +19,6 @@ vmOne.respond();
 parentPort.on('message', m => {
   vmOne.handleRunInThread();
 });
-
-console.log('boot 4');
 
 setInterval(() => {
   console.log('child interval');

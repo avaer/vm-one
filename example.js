@@ -9,10 +9,6 @@ v1.getGlobal(g => {
 });
 console.log('example 3');
 
-const p = require.resolve('./build/Release/vm_one2.node');
-vmOne.dlclose(p);
-const vm_one2 = require(p);
-
 /* const v2 = vmOne.make();
 console.log('timeout 2');
 v2.getGlobal(g => {

@@ -1,6 +1,7 @@
 const path = require('path');
 const {Worker} = require('worker_threads');
-const {VmOne: nativeVmOne} = require('./build/Release/vm_one.node');
+const {VmOne: nativeVmOne} = require(path.join(__dirname, 'build', 'Release', 'vm_one.node'));
+const vmOne2SoPath = require.resolve(path.join(__dirname, 'build', 'Release', 'vm_one2.node'));
 
 /* let compiling = false;
 const make = () => new VmOne(e => {
@@ -22,10 +23,8 @@ const vmOne = {
         array: vmOne.toArray(),
       },
     });
-
-    console.log('request 1');
     vmOne.request();
-    console.log('request 2');
+    nativeVmOne.dlclose(vmOne2SoPath); // so we can re-require the module from a different child
 
     vmOne.runSync = code => {
       worker.postMessage({
@@ -47,7 +46,6 @@ const vmOne = {
   fromArray(arg) {
     return new VmOne(arg);
   },
-  dlclose: nativeVmOne.dlclose,
 }
 
 module.exports = vmOne;
