@@ -3,7 +3,9 @@
 #include <nan.h>
 
 #include <dlfcn.h>
-#include <iostream>
+#include <deque>
+#include <map>
+#include <mutex>
 
 using namespace v8;
 using namespace node;
@@ -15,6 +17,14 @@ using namespace node;
 #define JS_BOOL(val) Nan::New<v8::Boolean>(val)
 
 namespace vmone {
+
+void Init(Handle<Object> exports);
+void RunInMainThread(uv_async_t *handle);
+
+uv_async_t async;
+std::map<int, Nan::Persistent<Function>> asyncFns;
+std::deque<int> asyncQueue;
+std::mutex asyncMutex;
 
 class VmOne : public ObjectWrap {
 public:
@@ -28,24 +38,20 @@ public:
   static NAN_METHOD(Request);
   static NAN_METHOD(Respond);
   static NAN_METHOD(HandleRunInThread);
+  static NAN_METHOD(QueueAsyncRequest);
+  static NAN_METHOD(QueueAsyncResponse);
 
   VmOne(VmOne *ovmo = nullptr);
   ~VmOne();
 
-  static void RunInThread(uv_async_t *handle);
-
 // protected:
   Nan::Persistent<Value> global;
   Nan::Persistent<Value> securityToken;
-  uv_async_t *async;
   uv_sem_t *lockRequestSem;
   uv_sem_t *lockResponseSem;
   uv_sem_t *requestSem;
   VmOne *oldVmOne;
 };
-
-thread_local VmOne *threadVmOne = nullptr;
-void Init(Handle<Object> exports);
 
 Handle<Object> VmOne::Initialize() {
   Nan::EscapableHandleScope scope;
@@ -62,6 +68,8 @@ Handle<Object> VmOne::Initialize() {
   Nan::SetMethod(proto, "request", Request);
   Nan::SetMethod(proto, "respond", Respond);
   Nan::SetMethod(proto, "handleRunInThread", HandleRunInThread);
+  Nan::SetMethod(proto, "queueAsyncRequest", QueueAsyncRequest);
+  Nan::SetMethod(proto, "queueAsyncResponse", QueueAsyncResponse);
 
   Local<Function> ctorFn = ctor->GetFunction();
   ctorFn->Set(JS_STR("fromArray"), Nan::New<Function>(FromArray));
@@ -92,10 +100,6 @@ NAN_METHOD(VmOne::New) {
 
   VmOne *vmOne = oldVmOne ? new VmOne(oldVmOne) : new VmOne();
   vmOne->Wrap(vmOneObj);
-
-  if (!oldVmOne) {
-    threadVmOne = vmOne; // XXX check for duplicates
-  }
 
   info.GetReturnValue().Set(vmOneObj);
 }
@@ -131,10 +135,10 @@ NAN_METHOD(VmOne::Dlclose) {
     if (handle) {
       while (dlclose(handle) == 0) {}
     } else {
-      Nan::ThrowError("Dlclose: failed to open handle to close");
+      Nan::ThrowError("VmOne::Dlclose: failed to open handle to close");
     }
   } else {
-    Nan::ThrowError("Dlclose: invalid arguments");
+    Nan::ThrowError("VmOne::Dlclose: invalid arguments");
   }
 }
 
@@ -142,7 +146,6 @@ VmOne::VmOne(VmOne *ovmo) {
   if (!ovmo) {
     securityToken.Reset(Isolate::GetCurrent()->GetCurrentContext()->GetSecurityToken());
 
-    async = nullptr;
     lockRequestSem = new uv_sem_t();
     uv_sem_init(lockRequestSem, 0);
     lockResponseSem = new uv_sem_t();
@@ -158,8 +161,9 @@ VmOne::VmOne(VmOne *ovmo) {
     // ContextEmbedderIndex::kAllowWasmCodeGeneration = 34
     localContext->SetEmbedderData(34, Nan::New<Boolean>(true));
 
-    async = ovmo->async = new uv_async_t();
-    uv_async_init(uv_default_loop(), async, RunInThread);
+    /* uv_async_t lol;
+    uv_async_init(uv_default_loop(), &lol, RunInMainThread); */
+
     lockRequestSem = ovmo->lockRequestSem;
     lockResponseSem = ovmo->lockResponseSem;
     requestSem = ovmo->requestSem;
@@ -169,8 +173,6 @@ VmOne::VmOne(VmOne *ovmo) {
 
 VmOne::~VmOne() {
   if (!oldVmOne) {
-    uv_close((uv_handle_t *)async, nullptr);
-    delete async;
     uv_sem_destroy(lockRequestSem);
     delete lockRequestSem;
     uv_sem_destroy(lockResponseSem);
@@ -190,16 +192,51 @@ NAN_METHOD(VmOne::HandleRunInThread) {
   vmOne->oldVmOne->global.Reset();
 }
 
-void VmOne::RunInThread(uv_async_t *handle) {
+NAN_METHOD(VmOne::QueueAsyncRequest) {
+  if (info[0]->IsFunction()) {
+    Local<Function> localFn = Local<Function>::Cast(info[0]);
+
+    int key = rand();
+    {
+      std::lock_guard<std::mutex> lock(asyncMutex);
+
+      asyncFns.emplace(key, localFn);
+    }
+
+    info.GetReturnValue().Set(JS_INT(key));
+  } else {
+    Nan::ThrowError("VmOne::QueueAsyncRequest: invalid arguments");
+  }
+}
+
+NAN_METHOD(VmOne::QueueAsyncResponse) {
+  if (info[0]->IsNumber()) {
+    int key = info[0]->Int32Value();
+
+    {
+      std::lock_guard<std::mutex> lock(asyncMutex);
+
+      asyncQueue.push_back(key);
+    }
+  } else {
+    Nan::ThrowError("VmOne::QueueAsyncResponse: invalid arguments");
+  }
+}
+
+void RunInMainThread(uv_async_t *handle) {
   Nan::HandleScope scope;
 
-  VmOne *vmOne = threadVmOne;
-  vmOne->oldVmOne->global.Reset(Isolate::GetCurrent()->GetCurrentContext()->Global());
-  uv_sem_post(threadVmOne->lockRequestSem);
+  {
+    std::lock_guard<std::mutex> lock(asyncMutex);
 
-  uv_sem_wait(threadVmOne->lockResponseSem);
-
-  vmOne->oldVmOne->global.Reset();
+    for (auto iter = asyncQueue.begin(); iter != asyncQueue.end(); iter++) {
+      int key = *iter;
+      Nan::Persistent<Function> &fn = asyncFns[key];
+      Local<Function> localFn = Nan::New(fn);
+      localFn->Call(Nan::Null(), 0, nullptr);
+    }
+    asyncQueue.clear();
+  }
 }
 
 NAN_METHOD(VmOne::GetGlobal) {
@@ -213,7 +250,6 @@ NAN_METHOD(VmOne::GetGlobal) {
     postMessageFn->Call(Nan::Null(), 0, nullptr);
   }
 
-  // uv_async_send(vmOne->async);
   uv_sem_wait(vmOne->lockRequestSem);
 
   {
@@ -242,14 +278,20 @@ void Init(Handle<Object> exports) {
   exports->Set(JS_STR("VmOne"), VmOne::Initialize());
 }
 
+void RootInit(Handle<Object> exports) {
+  uv_async_init(uv_default_loop(), &async, RunInMainThread);
+
+  Init(exports);
+}
+
 }
 
 #ifndef LUMIN
-NODE_MODULE(NODE_GYP_MODULE_NAME, vmone::Init)
+NODE_MODULE(NODE_GYP_MODULE_NAME, vmone::RootInit)
 #else
 extern "C" {
   void node_register_module_vm_one(Local<Object> exports, Local<Value> module, Local<Context> context) {
-    vmone::Init(exports);
+    vmone::RootInit(exports);
   }
 }
 #endif
