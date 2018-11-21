@@ -1,8 +1,6 @@
 const path = require('path');
 const {workerData, parentPort} = require('worker_threads');
 
-// console.log('child require cache', Object.keys(require.cache));
-
 const nativeVmOne = (() => {
   const exports = {};
 
