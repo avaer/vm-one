@@ -20,6 +20,6 @@ parentPort.on('message', m => {
   vmOne.handleRunInThread();
 });
 
-setInterval(() => {
+/* setInterval(() => {
   console.log('child interval');
-}, 200);
+}, 200); */
