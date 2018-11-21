@@ -1,16 +1,19 @@
-const fs = require('fs');
-
 const vmOne = require('.');
 
-const v1 = vmOne.make();
-console.log('example 1');
-v1.getGlobal(g => {
-  console.log('example 2', Object.keys(g));
-});
-console.log('example 3');
+(() => {
+  const v = vmOne.make();
+  console.log('example 1');
+  v.getGlobal(g => {
+    console.log('example 2', Object.keys(g));
+  });
+  console.log('example 3');
+})();
 
-/* const v2 = vmOne.make();
-console.log('timeout 2');
-v2.getGlobal(g => {
-  console.log('got global', Object.keys(g));
-}); */
+(() => {
+  const v = vmOne.make();
+  console.log('example 4');
+  v.getGlobal(g => {
+    console.log('example 5', Object.keys(g));
+  });
+  console.log('example 6');
+})();
