@@ -35,7 +35,7 @@ parentPort.on('message', m => {
       } catch(err) {
         console.warn(err.stack);
       }
-      vmOne.queueAsyncResponse(m.key);
+      vmOne.queueAsyncResponse(m.requestKey);
       break;
     }
     default: throw new Error(`invalid method: ${JSON.stringify(m.method)}`);

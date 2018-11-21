@@ -27,17 +27,39 @@ const vmOne = {
     vmOne.request();
     nativeVmOne.dlclose(vmOne2SoPath); // so we can re-require the module from a different child
 
-    vmOne.runSync = code => {
+    vmOne.runSync = jsString => {
       worker.postMessage({
-        code,
-        request: true,
+        method: 'runSync',
+        jsString,
       });
       vmOne.request();
     };
-    vmOne.runAsync = code => {
+    vmOne.runAsync = jsString => {
+      let accept = null;
+      let done = false;
+      console.log('run async 1');
+      const requestKey = vmOne.queueAsyncRequest(() => {
+        console.log('run async 2', !!accept, !!done);
+        if (accept) {
+          accept();
+        } else {
+          done = true;
+        }
+      });
+      console.log('run async 3', requestKey);
       worker.postMessage({
-        code,
-        request: false,
+        method: 'runAsync',
+        jsString,
+        requestKey,
+      });
+      console.log('run async 4');
+      return new Promise((a, r) => {
+        console.log('run async 5', !!accept, !!done);
+        if (done) {
+          a();
+        } else {
+          accept = a;
+        }
       });
     };
     vmOne.postMessage = (m, transferList) => worker.postMessage(m, transferList);

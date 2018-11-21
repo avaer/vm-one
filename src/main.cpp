@@ -196,14 +196,14 @@ NAN_METHOD(VmOne::QueueAsyncRequest) {
   if (info[0]->IsFunction()) {
     Local<Function> localFn = Local<Function>::Cast(info[0]);
 
-    int key = rand();
+    int requestKey = rand();
     {
       std::lock_guard<std::mutex> lock(asyncMutex);
 
-      asyncFns.emplace(key, localFn);
+      asyncFns.emplace(requestKey, localFn);
     }
 
-    info.GetReturnValue().Set(JS_INT(key));
+    info.GetReturnValue().Set(JS_INT(requestKey));
   } else {
     Nan::ThrowError("VmOne::QueueAsyncRequest: invalid arguments");
   }
@@ -211,18 +211,20 @@ NAN_METHOD(VmOne::QueueAsyncRequest) {
 
 NAN_METHOD(VmOne::QueueAsyncResponse) {
   if (info[0]->IsNumber()) {
-    int key = info[0]->Int32Value();
-
+    int requestKey = info[0]->Int32Value();
     {
       std::lock_guard<std::mutex> lock(asyncMutex);
 
-      asyncQueue.push_back(key);
+      asyncQueue.push_back(requestKey);
     }
+
+    uv_async_send(&async);
   } else {
     Nan::ThrowError("VmOne::QueueAsyncResponse: invalid arguments");
   }
 }
 
+NAN_METHOD(nop) {}
 void RunInMainThread(uv_async_t *handle) {
   Nan::HandleScope scope;
 
@@ -230,10 +232,21 @@ void RunInMainThread(uv_async_t *handle) {
     std::lock_guard<std::mutex> lock(asyncMutex);
 
     for (auto iter = asyncQueue.begin(); iter != asyncQueue.end(); iter++) {
-      int key = *iter;
-      Nan::Persistent<Function> &fn = asyncFns[key];
-      Local<Function> localFn = Nan::New(fn);
-      localFn->Call(Nan::Null(), 0, nullptr);
+      int requestKey = *iter;
+
+      {
+        Nan::HandleScope scope;
+
+        Local<Object> asyncObj = Nan::New<Object>();
+        AsyncResource asyncResource(Isolate::GetCurrent(), asyncObj, "VmOne::RunInMainThread");
+
+        Nan::Persistent<Function> &fn = asyncFns[requestKey];
+        Local<Function> localFn = Nan::New(fn);
+
+        asyncResource.MakeCallback(localFn, 0, nullptr);
+      }
+
+      asyncFns.erase(requestKey);
     }
     asyncQueue.clear();
   }
