@@ -6,7 +6,6 @@
 #include <deque>
 #include <map>
 #include <mutex>
-#include <iostream>
 
 using namespace v8;
 using namespace node;
@@ -186,13 +185,8 @@ VmOne::~VmOne() {
   VmOne *vmOne = ObjectWrap::Unwrap<VmOne>(info.This());
   vmOne->oldVmOne->result.Reset(Isolate::GetCurrent()->GetCurrentContext()->Global());
 
-  std::cout << "push global 1" << std::endl;
-
   uv_sem_post(vmOne->lockRequestSem);
-  std::cout << "push global 2" << std::endl;
   uv_sem_wait(vmOne->lockResponseSem);
-
-  std::cout << "push global 3" << std::endl;
 
   vmOne->oldVmOne->result.Reset();
 } */
@@ -224,25 +218,15 @@ NAN_METHOD(VmOne::PopResult) {
 }
 
 NAN_METHOD(VmOne::QueueAsyncRequest) {
-  std::cout << "queue async request 0" << std::endl;
-  std::cout << "queue async request 1 " << info[0]->IsFunction() << std::endl;
   if (info[0]->IsFunction()) {
-    std::cout << "queue async request 2" << std::endl;
-
     Local<Function> localFn = Local<Function>::Cast(info[0]);
-
-    std::cout << "queue async request 3" << std::endl;
 
     int requestKey = rand();
     {
       std::lock_guard<std::mutex> lock(asyncMutex);
 
-      std::cout << "queue async request 4" << std::endl;
-
       asyncFns.emplace(requestKey, localFn);
     }
-
-    std::cout << "queue async request 5" << std::endl;
 
     info.GetReturnValue().Set(JS_INT(requestKey));
   } else {
@@ -303,8 +287,6 @@ void RunInMainThread(uv_async_t *handle) {
   VmOne *vmOne = ObjectWrap::Unwrap<VmOne>(info.This());
   Local<Function> cb = Local<Function>::Cast(info[0]);
 
-  std::cout << "get global 1" << std::endl;
-
   {
     Nan::HandleScope scope;
 
@@ -317,11 +299,7 @@ void RunInMainThread(uv_async_t *handle) {
     postMessageFn->Call(Nan::Null(), sizeof(argv)/sizeof(argv[0]), argv);
   }
 
-  std::cout << "get global 2" << std::endl;
-
   uv_sem_wait(vmOne->lockRequestSem);
-
-  std::cout << "get global 3 " << vmOne->result.IsEmpty()  << std::endl;
 
   {
     Nan::HandleScope scope;
@@ -331,8 +309,6 @@ void RunInMainThread(uv_async_t *handle) {
     };
     cb->Call(Nan::Null(), sizeof(argv)/sizeof(argv[0]), argv);
   }
-
-  std::cout << "get global 4" << std::endl;
 
   uv_sem_post(vmOne->lockResponseSem);
 } */
