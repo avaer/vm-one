@@ -6,6 +6,7 @@
 #include <deque>
 #include <map>
 #include <mutex>
+#include <iostream>
 
 using namespace v8;
 using namespace node;
@@ -23,7 +24,7 @@ void RunInMainThread(uv_async_t *handle);
 
 uv_async_t async;
 std::map<int, Nan::Persistent<Function>> asyncFns;
-std::deque<int> asyncQueue;
+std::deque<std::pair<int, std::string>> asyncQueue;
 std::mutex asyncMutex;
 
 class VmOne : public ObjectWrap {
@@ -31,13 +32,15 @@ public:
   static Handle<Object> Initialize();
 // protected:
   static NAN_METHOD(New);
-  static NAN_METHOD(GetGlobal);
+  // static NAN_METHOD(GetGlobal);
   static NAN_METHOD(FromArray);
   static NAN_METHOD(ToArray);
   static NAN_METHOD(Dlclose);
   static NAN_METHOD(Request);
   static NAN_METHOD(Respond);
-  static NAN_METHOD(HandleRunInThread);
+  // static NAN_METHOD(PushGlobal);
+  static NAN_METHOD(PushResult);
+  static NAN_METHOD(PopResult);
   static NAN_METHOD(QueueAsyncRequest);
   static NAN_METHOD(QueueAsyncResponse);
 
@@ -45,8 +48,7 @@ public:
   ~VmOne();
 
 // protected:
-  Nan::Persistent<Value> global;
-  Nan::Persistent<Value> securityToken;
+  std::string result;
   uv_sem_t *lockRequestSem;
   uv_sem_t *lockResponseSem;
   uv_sem_t *requestSem;
@@ -64,10 +66,12 @@ Handle<Object> VmOne::Initialize() {
   // prototype
   Local<ObjectTemplate> proto = ctor->PrototypeTemplate();
   Nan::SetMethod(proto, "toArray", ToArray);
-  Nan::SetMethod(proto, "getGlobal", GetGlobal);
+  // Nan::SetMethod(proto, "getGlobal", GetGlobal);
   Nan::SetMethod(proto, "request", Request);
   Nan::SetMethod(proto, "respond", Respond);
-  Nan::SetMethod(proto, "handleRunInThread", HandleRunInThread);
+  // Nan::SetMethod(proto, "pushGlobal", PushGlobal);
+  Nan::SetMethod(proto, "pushResult", PushResult);
+  Nan::SetMethod(proto, "popResult", PopResult);
   Nan::SetMethod(proto, "queueAsyncRequest", QueueAsyncRequest);
   Nan::SetMethod(proto, "queueAsyncResponse", QueueAsyncResponse);
 
@@ -144,8 +148,6 @@ NAN_METHOD(VmOne::Dlclose) {
 
 VmOne::VmOne(VmOne *ovmo) {
   if (!ovmo) {
-    securityToken.Reset(Isolate::GetCurrent()->GetCurrentContext()->GetSecurityToken());
-
     lockRequestSem = new uv_sem_t();
     uv_sem_init(lockRequestSem, 0);
     lockResponseSem = new uv_sem_t();
@@ -153,10 +155,8 @@ VmOne::VmOne(VmOne *ovmo) {
     requestSem = new uv_sem_t();
     uv_sem_init(requestSem, 0);
   } else {
-    Local<Value> oldSecurityToken = Nan::New(ovmo->securityToken);
     Local<Context> localContext = Isolate::GetCurrent()->GetCurrentContext();
 
-    localContext->SetSecurityToken(oldSecurityToken);
     localContext->AllowCodeGenerationFromStrings(true);
     // ContextEmbedderIndex::kAllowWasmCodeGeneration = 34
     localContext->SetEmbedderData(34, Nan::New<Boolean>(true));
@@ -182,26 +182,67 @@ VmOne::~VmOne() {
   }
 }
 
-NAN_METHOD(VmOne::HandleRunInThread) {
+/* NAN_METHOD(VmOne::PushGlobal) {
   VmOne *vmOne = ObjectWrap::Unwrap<VmOne>(info.This());
-  vmOne->oldVmOne->global.Reset(Isolate::GetCurrent()->GetCurrentContext()->Global());
-  uv_sem_post(vmOne->lockRequestSem);
+  vmOne->oldVmOne->result.Reset(Isolate::GetCurrent()->GetCurrentContext()->Global());
 
+  std::cout << "push global 1" << std::endl;
+
+  uv_sem_post(vmOne->lockRequestSem);
+  std::cout << "push global 2" << std::endl;
   uv_sem_wait(vmOne->lockResponseSem);
 
-  vmOne->oldVmOne->global.Reset();
+  std::cout << "push global 3" << std::endl;
+
+  vmOne->oldVmOne->result.Reset();
+} */
+
+NAN_METHOD(VmOne::PushResult) {
+  if (info[0]->IsString()) {
+    VmOne *vmOne = ObjectWrap::Unwrap<VmOne>(info.This());
+    Local<String> stringValue = Local<String>::Cast(info[0]);
+    String::Utf8Value utf8Value(stringValue);
+    vmOne->oldVmOne->result = std::string(*utf8Value, utf8Value.length());
+
+    uv_sem_post(vmOne->lockRequestSem);
+    uv_sem_wait(vmOne->lockResponseSem);
+
+    vmOne->oldVmOne->result.clear();
+  } else {
+    Nan::ThrowError("VmOne::PushResult: invalid arguments");
+  }
+}
+
+NAN_METHOD(VmOne::PopResult) {
+  VmOne *vmOne = ObjectWrap::Unwrap<VmOne>(info.This());
+
+  uv_sem_wait(vmOne->lockRequestSem);
+  Local<String> result = JS_STR(vmOne->result);
+  uv_sem_post(vmOne->lockResponseSem);
+
+  info.GetReturnValue().Set(result);
 }
 
 NAN_METHOD(VmOne::QueueAsyncRequest) {
+  std::cout << "queue async request 0" << std::endl;
+  std::cout << "queue async request 1 " << info[0]->IsFunction() << std::endl;
   if (info[0]->IsFunction()) {
+    std::cout << "queue async request 2" << std::endl;
+
     Local<Function> localFn = Local<Function>::Cast(info[0]);
+
+    std::cout << "queue async request 3" << std::endl;
 
     int requestKey = rand();
     {
       std::lock_guard<std::mutex> lock(asyncMutex);
 
+      std::cout << "queue async request 4" << std::endl;
+
       asyncFns.emplace(requestKey, localFn);
     }
+
+    std::cout << "queue async request 5" << std::endl;
 
     info.GetReturnValue().Set(JS_INT(requestKey));
   } else {
@@ -210,12 +251,14 @@ NAN_METHOD(VmOne::QueueAsyncRequest) {
 }
 
 NAN_METHOD(VmOne::QueueAsyncResponse) {
-  if (info[0]->IsNumber()) {
+  if (info[0]->IsNumber() && info[1]->IsString()) {
     int requestKey = info[0]->Int32Value();
+    String::Utf8Value utf8Value(info[1]);
+
     {
       std::lock_guard<std::mutex> lock(asyncMutex);
 
-      asyncQueue.push_back(requestKey);
+      asyncQueue.emplace_back(requestKey, std::string(*utf8Value, utf8Value.length()));
     }
 
     uv_async_send(&async);
@@ -232,7 +275,8 @@ void RunInMainThread(uv_async_t *handle) {
     std::lock_guard<std::mutex> lock(asyncMutex);
 
     for (auto iter = asyncQueue.begin(); iter != asyncQueue.end(); iter++) {
-      int requestKey = *iter;
+      const int &requestKey = iter->first;
+      const std::string &requestResult = iter->second;
 
       {
         Nan::HandleScope scope;
@@ -243,7 +287,10 @@ void RunInMainThread(uv_async_t *handle) {
         Nan::Persistent<Function> &fn = asyncFns[requestKey];
         Local<Function> localFn = Nan::New(fn);
 
-        asyncResource.MakeCallback(localFn, 0, nullptr);
+        Local<Value> argv[] = {
+          JS_STR(requestResult),
+        };
+        asyncResource.MakeCallback(localFn, sizeof(argv)/sizeof(argv[0]), argv);
       }
 
       asyncFns.erase(requestKey);
@@ -252,9 +299,11 @@ void RunInMainThread(uv_async_t *handle) {
   }
 }
 
-NAN_METHOD(VmOne::GetGlobal) {
+/* NAN_METHOD(VmOne::GetGlobal) {
   VmOne *vmOne = ObjectWrap::Unwrap<VmOne>(info.This());
   Local<Function> cb = Local<Function>::Cast(info[0]);
+
+  std::cout << "get global 1" << std::endl;
 
   {
     Nan::HandleScope scope;
@@ -268,19 +317,25 @@ NAN_METHOD(VmOne::GetGlobal) {
     postMessageFn->Call(Nan::Null(), sizeof(argv)/sizeof(argv[0]), argv);
   }
 
+  std::cout << "get global 2" << std::endl;
+
   uv_sem_wait(vmOne->lockRequestSem);
+
+  std::cout << "get global 3 " << vmOne->result.IsEmpty()  << std::endl;
 
   {
     Nan::HandleScope scope;
 
     Local<Value> argv[] = {
-      Nan::New(vmOne->global),
+      Nan::New(vmOne->result),
     };
     cb->Call(Nan::Null(), sizeof(argv)/sizeof(argv[0]), argv);
   }
 
+  std::cout << "get global 4" << std::endl;
+
   uv_sem_post(vmOne->lockResponseSem);
-}
+} */
 
 NAN_METHOD(VmOne::Request) {
   VmOne *vmOne = ObjectWrap::Unwrap<VmOne>(info.This());

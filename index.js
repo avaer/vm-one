@@ -24,26 +24,33 @@ const vmOne = {
         array: vmOne.toArray(),
       },
     });
+    worker.on('error', err => {
+      console.warn(err.stack);
+    });
     vmOne.request();
     nativeVmOne.dlclose(vmOne2SoPath); // so we can re-require the module from a different child
 
     vmOne.runSync = jsString => {
+      console.log('run sync 1');
       worker.postMessage({
         method: 'runSync',
         jsString,
       });
-      vmOne.request();
+      console.log('run sync 2');
+      return JSON.parse(vmOne.popResult());
     };
     vmOne.runAsync = jsString => {
       let accept = null;
       let done = false;
+      let result;
       console.log('run async 1');
-      const requestKey = vmOne.queueAsyncRequest(() => {
-        console.log('run async 2', !!accept, !!done);
+      const requestKey = vmOne.queueAsyncRequest(r => {
+        console.log('run async 2', !!accept, !!done, r);
         if (accept) {
-          accept();
+          accept(r);
         } else {
           done = true;
+          result = r;
         }
       });
       console.log('run async 3', requestKey);
@@ -53,12 +60,12 @@ const vmOne = {
         requestKey,
       });
       console.log('run async 4');
-      return new Promise((a, r) => {
-        console.log('run async 5', !!accept, !!done);
+      return new Promise((accept2, reject2) => {
+        console.log('run async 5', !!accept, !!done, result);
         if (done) {
-          a();
+          accept2(result);
         } else {
-          accept = a;
+          accept = accept2;
         }
       });
     };

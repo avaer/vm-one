@@ -16,26 +16,31 @@ const vmOne = nativeVmOne.fromArray(workerData.array);
 vmOne.respond();
 parentPort.on('message', m => {
   switch (m.method) {
-    case 'lock': {
-      vmOne.handleRunInThread();
+    /* case 'lock': {
+      vmOne.pushResult(global);
       break;
-    }
+    } */
     case 'runSync': {
+      let result;
       try {
-        eval(m.jsString);
+        const resultValue = eval(`(() => { ${m.jsString} })()`);
+        result = JSON.stringify(resultValue !== undefined ? resultValue : null);
       } catch(err) {
         console.warn(err.stack);
       }
-      vmOne.respond();
+      console.log('push', result);
+      vmOne.pushResult(result);
       break;
     }
     case 'runAsync': {
+      let result;
       try {
-        eval(m.jsString);
+        const resultValue = eval(`(() => { ${m.jsString} })()`);
+        result = JSON.stringify(resultValue !== undefined ? resultValue : null);
       } catch(err) {
         console.warn(err.stack);
       }
-      vmOne.queueAsyncResponse(m.requestKey);
+      vmOne.queueAsyncResponse(m.requestKey, result);
       break;
     }
     default: throw new Error(`invalid method: ${JSON.stringify(m.method)}`);

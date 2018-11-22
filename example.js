@@ -4,27 +4,32 @@ const vmOne = require('.');
   {
     const v = vmOne.make();
     console.log('example 1');
-    v.getGlobal(g => {
-      console.log('example 2', Object.keys(g));
-    });
-    console.log('example 3');
+    let result = v.runSync(`
+      console.log('example 2');
 
-    v.runSync(`
+      global.lol = 'zol';
+      return 'woot';
+    `);
+    console.log('example 3', result);
+    result = await v.runAsync(`
       console.log('example 4');
+
+      global.lol = 'zol2';
+      return 'toot';
     `);
-    await v.runAsync(`
-      console.log('example 5');
-    `);
-    console.log('example 6');
+    console.log('example 5', result);
   }
 
   {
     const v = vmOne.make();
-    console.log('example 7');
-    v.getGlobal(g => {
-      console.log('example 8', Object.keys(g));
-    });
-    console.log('example 9');
+    console.log('example 6');
+    let result = v.runSync(`
+      console.log('example 7');
+
+      global.lol = 'zol';
+      return 'woot';
+    `);
+    console.log('example 8', result);
   }
 
   process.exit();
