@@ -2,7 +2,12 @@
 #include <uv.h>
 #include <nan.h>
 
+#ifndef _WIN32
 #include <dlfcn.h>
+#else
+// nothing
+#endif
+
 #include <deque>
 #include <map>
 #include <mutex>
@@ -43,6 +48,8 @@ public:
   static NAN_METHOD(QueueAsyncRequest);
   static NAN_METHOD(QueueAsyncResponse);
 
+  static bool Dlclose(const char *soPath);
+  
   VmOne(VmOne *ovmo = nullptr);
   ~VmOne();
 
@@ -129,14 +136,40 @@ NAN_METHOD(VmOne::ToArray) {
   info.GetReturnValue().Set(array);
 }
 
+bool VmOne::Dlclose(const char *soPath) {
+#ifndef _WIN32
+  void *handle = dlopen(*soPathUtf8Value, RTLD_LAZY);
+
+  if (handle) {
+    while (dlclose(handle) == 0) {}
+    
+    return true;
+  } else {
+    return false;
+  }
+#else
+  WCHAR soPath_w[32768];
+  MultiByteToWideChar(CP_UTF8, 0, soPath, -1, soPath_w, sizeof(soPath_w)/sizeof(soPath_w[0]));
+  
+  HMODULE handle = LoadLibraryExW(soPath_w, NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
+  if (handle != NULL) {
+    while (FreeLibrary(handle)) {}
+    
+    return true;
+  } else {
+    return false;
+  }
+#endif
+}
+
 NAN_METHOD(VmOne::Dlclose) {
   if (info[0]->IsString()) {
     Local<String> soPathString = Local<String>::Cast(info[0]);
     String::Utf8Value soPathUtf8Value(soPathString);
-    void *handle = dlopen(*soPathUtf8Value, RTLD_LAZY);
-
-    if (handle) {
-      while (dlclose(handle) == 0) {}
+    const char *soPath = *soPathUtf8Value;
+    
+    if (Dlclose(soPath)) {
+      // nothing
     } else {
       Nan::ThrowError("VmOne::Dlclose: failed to open handle to close");
     }
