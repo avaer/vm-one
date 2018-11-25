@@ -138,7 +138,7 @@ NAN_METHOD(VmOne::ToArray) {
 
 bool VmOne::Dlclose(const char *soPath) {
 #ifndef _WIN32
-  void *handle = dlopen(*soPathUtf8Value, RTLD_LAZY);
+  void *handle = dlopen(soPath, RTLD_LAZY);
 
   if (handle) {
     while (dlclose(handle) == 0) {}
