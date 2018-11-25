@@ -32,5 +32,7 @@ const vmOne = require('.');
     console.log('example 8', result);
   }
 
-  process.exit();
+  setTimeout(() => {
+    process.exit();
+  }, 100);
 })();
