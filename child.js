@@ -23,7 +23,8 @@ parentPort.on('message', m => {
     case 'runSync': {
       let result;
       try {
-        const resultValue = eval(`(() => { ${m.jsString} })()`);
+        const fn = eval(`(function(arg) { ${m.jsString} })`);
+        const resultValue = fn(m.arg);
         result = JSON.stringify(resultValue !== undefined ? resultValue : null);
       } catch(err) {
         console.warn(err.stack);
@@ -35,7 +36,8 @@ parentPort.on('message', m => {
     case 'runAsync': {
       let result;
       try {
-        const resultValue = eval(`(() => { ${m.jsString} })()`);
+        const fn = eval(`(function(arg) { ${m.jsString} })`);
+        const resultValue = fn(m.arg);
         result = JSON.stringify(resultValue !== undefined ? resultValue : null);
       } catch(err) {
         console.warn(err.stack);
