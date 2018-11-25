@@ -1,5 +1,8 @@
+const {EventEmitter} = require('events');
 const path = require('path');
 const {workerData, parentPort} = require('worker_threads');
+
+// latch parent VmOne
 
 const vmOne = (() => {
   const exports = {};
@@ -13,11 +16,15 @@ const vmOne = (() => {
   return vmOne;
 })();
 
-if (workerData.initModule) {
-  require(workerData.initModule);
-}
+// global initialization
 
-vmOne.respond();
+for (const k in EventEmitter.prototype) {
+  global[k] = EventEmitter.prototype[k];
+}
+EventEmitter.call(global);
+
+global.postMessage = (m, transferList) => parentPort.postMessage(m, transferList);
+
 parentPort.on('message', m => {
   switch (m.method) {
     /* case 'lock': {
@@ -49,9 +56,27 @@ parentPort.on('message', m => {
       vmOne.queueAsyncResponse(m.requestKey, result);
       break;
     }
+    case 'postMessage': {
+      try {
+        global.emit('message', m.message);
+      } catch(err) {
+        console.warn(err.stack);
+      }
+      break;
+    }
     default: throw new Error(`invalid method: ${JSON.stringify(m.method)}`);
   }
 });
+
+// run init module
+
+if (workerData.initModule) {
+  require(workerData.initModule);
+}
+
+// release lock
+
+vmOne.respond();
 
 /* setInterval(() => {
   console.log('child interval');
