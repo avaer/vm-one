@@ -2,7 +2,9 @@ const vmOne = require('.');
 
 (async () => {
   {
-    const v = vmOne.make();
+    const v = vmOne.make({
+      initModule: './example-module.js',
+    });
     console.log('example 1');
     const int32Array = Int32Array.from([1, 2, 3]);
     const int32SharedArray = new Int32Array(new SharedArrayBuffer(3 * Int32Array.BYTES_PER_ELEMENT));
