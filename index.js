@@ -15,13 +15,14 @@ const make = () => new VmOne(e => {
 const isCompiling = () => compiling; */
 
 const vmOne = {
-  make() {
+  make(options = {}) {
     const vmOne = new nativeVmOne();
 
     const worker = new Worker(childJsPath, {
       workerData: {
         initFnAddress: nativeVmOne.initFnAddress,
         array: vmOne.toArray(),
+        initModule: options.initModule,
       },
     });
     worker.on('error', err => {
