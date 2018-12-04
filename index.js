@@ -26,6 +26,7 @@ class Vm extends EventEmitter {
         initFnAddress: nativeVmOne.initFnAddress,
         array: instance.toArray(),
         initModule: options.initModule,
+        args: options.args,
       },
     });
     worker.on('message', m => {

@@ -70,6 +70,9 @@ parentPort.on('message', m => {
 
 // run init module
 
+if (workerData.args) {
+  global.args = workerData.args;
+}
 if (workerData.initModule) {
   require(workerData.initModule);
 }
