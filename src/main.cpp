@@ -30,6 +30,7 @@ uv_async_t async;
 std::map<int, Nan::Persistent<Function>> asyncFns;
 std::deque<std::pair<int, std::string>> asyncQueue;
 std::mutex asyncMutex;
+map<string, uintptr_t> nativeRequires;
 
 class VmOne : public ObjectWrap {
 public:
@@ -84,6 +85,8 @@ Handle<Object> VmOne::Initialize() {
   Local<Function> ctorFn = ctor->GetFunction();
   ctorFn->Set(JS_STR("fromArray"), Nan::New<Function>(FromArray));
   ctorFn->Set(JS_STR("dlclose"), Nan::New<Function>(Dlclose));
+  ctorFn->Set(JS_STR("requireNative"), Nan::New<Function>(RequireNative));
+  ctorFn->Set(JS_STR("setNativeRequire"), Nan::New<Function>(SetNativeRequire);
 
   uintptr_t initFnAddress = (uintptr_t)vmone::Init;
   Local<Array> initFnAddressArray = Nan::New<Array>(2);
@@ -175,6 +178,43 @@ NAN_METHOD(VmOne::Dlclose) {
     }
   } else {
     Nan::ThrowError("VmOne::Dlclose: invalid arguments");
+  }
+}
+
+NAN_METHOD(VmOne::RequireNative) {
+  Local<String> requireNameValue = info[0]->ToString();
+  String::Utf8Value requireNameUtf8(requireNameValue);
+  string requireName(*requireNameUtf8, requireNameUtf8.length());
+
+  auto iter = nativeRequires.find(requireName);
+  if (iter != nativeRequires.end()) {
+    uintptr_t address = iter->second;
+    void (*Init)(Handle<Object> exports) = (void (*)(Handle<Object>))address;
+
+    Local<Object> exportsObj = Nan::New<Object>();
+    Init(exportsObj);
+    return info.GetReturnValue().Set(exportsObj);
+  } else {
+    return Nan::ThrowError("Native module not found");
+  }
+}
+
+NAN_METHOD(VmOne::SetNativeRequire) {
+  if (info[0]->IsString() && info[1]->IsArray()) {
+    Local<String> requireNameValue = info[0]->ToString();
+    String::Utf8Value requireNameUtf8(requireNameValue);
+    string requireName(*requireNameUtf8, requireNameUtf8.length());
+
+    Local<Array> requireAddressValue = Local<Array>::Cast(info[1]);
+    uintptr_t requireAddress = ((uint64_t)requireAddressValue->Get(0)->Uint32Value() << 32) | ((uint64_t)requireAddressValue->Get(1)->Uint32Value() & 0xFFFFFFFF);
+
+    if (requireAddress) {
+      nativeRequires[requireName] = requireAddress;
+    } else {
+      Nan::ThrowError("init function address cannot be null");
+    }
+  } else {
+    Nan::ThrowError("invalid arguments");
   }
 }
 
