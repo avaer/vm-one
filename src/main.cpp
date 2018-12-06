@@ -30,7 +30,7 @@ uv_async_t async;
 std::map<int, Nan::Persistent<Function>> asyncFns;
 std::deque<std::pair<int, std::string>> asyncQueue;
 std::mutex asyncMutex;
-map<string, uintptr_t> nativeRequires;
+std::map<std::string, uintptr_t> nativeRequires;
 
 class VmOne : public ObjectWrap {
 public:
@@ -88,7 +88,7 @@ Handle<Object> VmOne::Initialize() {
   ctorFn->Set(JS_STR("fromArray"), Nan::New<Function>(FromArray));
   ctorFn->Set(JS_STR("dlclose"), Nan::New<Function>(Dlclose));
   ctorFn->Set(JS_STR("requireNative"), Nan::New<Function>(RequireNative));
-  ctorFn->Set(JS_STR("setNativeRequire"), Nan::New<Function>(SetNativeRequire);
+  ctorFn->Set(JS_STR("setNativeRequire"), Nan::New<Function>(SetNativeRequire));
 
   uintptr_t initFunctionAddress = (uintptr_t)vmone::Init;
   Local<Array> initFunctionAddressArray = Nan::New<Array>(2);
@@ -186,7 +186,7 @@ NAN_METHOD(VmOne::Dlclose) {
 NAN_METHOD(VmOne::RequireNative) {
   Local<String> requireNameValue = info[0]->ToString();
   String::Utf8Value requireNameUtf8(requireNameValue);
-  string requireName(*requireNameUtf8, requireNameUtf8.length());
+  std::string requireName(*requireNameUtf8, requireNameUtf8.length());
 
   auto iter = nativeRequires.find(requireName);
   if (iter != nativeRequires.end()) {
@@ -205,7 +205,7 @@ NAN_METHOD(VmOne::SetNativeRequire) {
   if (info[0]->IsString() && info[1]->IsArray()) {
     Local<String> requireNameValue = info[0]->ToString();
     String::Utf8Value requireNameUtf8(requireNameValue);
-    string requireName(*requireNameUtf8, requireNameUtf8.length());
+    std::string requireName(*requireNameUtf8, requireNameUtf8.length());
 
     Local<Array> requireAddressValue = Local<Array>::Cast(info[1]);
     uintptr_t requireAddress = ((uint64_t)requireAddressValue->Get(0)->Uint32Value() << 32) | ((uint64_t)requireAddressValue->Get(1)->Uint32Value() & 0xFFFFFFFF);
