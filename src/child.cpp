@@ -2,7 +2,7 @@
 #include <uv.h>
 #include <nan.h>
 
-#include <iostream>
+// #include <iostream>
 
 using namespace v8;
 using namespace node;
