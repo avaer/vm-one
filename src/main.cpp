@@ -41,6 +41,8 @@ public:
   static NAN_METHOD(FromArray);
   static NAN_METHOD(ToArray);
   static NAN_METHOD(Dlclose);
+  static NAN_METHOD(RequireNative);
+  static NAN_METHOD(SetNativeRequire);
   static NAN_METHOD(Request);
   static NAN_METHOD(Respond);
   // static NAN_METHOD(PushGlobal);
