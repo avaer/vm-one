@@ -67,4 +67,7 @@ const vmOne = require('.');
   setTimeout(() => {
     process.exit();
   }, 100);
-})();
+})()
+  .catch(err => {
+    console.warn(err.stack);
+  });
