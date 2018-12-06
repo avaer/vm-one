@@ -2,6 +2,8 @@ const vmOne = require('.');
 
 (async () => {
   {
+    vmOne.setNativeRequire('vm-one', vmOne.initFunctionAddress);
+
     const v = vmOne.make({
       initModule: './example-module.js',
     });
