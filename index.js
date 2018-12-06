@@ -23,7 +23,7 @@ class Vm extends EventEmitter {
 
     const worker = new Worker(childJsPath, {
       workerData: {
-        initFnAddress: nativeVmOne.initFnAddress,
+        initFunctionAddress: nativeVmOne.initFunctionAddress,
         array: instance.toArray(),
         initModule: options.initModule,
         args: options.args,

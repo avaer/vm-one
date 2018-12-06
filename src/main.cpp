@@ -88,11 +88,11 @@ Handle<Object> VmOne::Initialize() {
   ctorFn->Set(JS_STR("requireNative"), Nan::New<Function>(RequireNative));
   ctorFn->Set(JS_STR("setNativeRequire"), Nan::New<Function>(SetNativeRequire);
 
-  uintptr_t initFnAddress = (uintptr_t)vmone::Init;
-  Local<Array> initFnAddressArray = Nan::New<Array>(2);
-  initFnAddressArray->Set(0, Nan::New<Integer>((uint32_t)(initFnAddress >> 32)));
-  initFnAddressArray->Set(1, Nan::New<Integer>((uint32_t)(initFnAddress & 0xFFFFFFFF)));
-  ctorFn->Set(JS_STR("initFnAddress"), initFnAddressArray);
+  uintptr_t initFunctionAddress = (uintptr_t)vmone::Init;
+  Local<Array> initFunctionAddressArray = Nan::New<Array>(2);
+  initFunctionAddressArray->Set(0, Nan::New<Integer>((uint32_t)(initFunctionAddress >> 32)));
+  initFunctionAddressArray->Set(1, Nan::New<Integer>((uint32_t)(initFunctionAddress & 0xFFFFFFFF)));
+  ctorFn->Set(JS_STR("initFunctionAddress"), initFunctionAddressArray);
 
   return scope.Escape(ctorFn);
 }

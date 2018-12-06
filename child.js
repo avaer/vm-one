@@ -8,7 +8,7 @@ const vmOne = (() => {
   const exports = {};
   const childVmOneSoPath = require.resolve(path.join(__dirname, 'build', 'Release', 'vm_one2.node'));
   const childVmOne = require(childVmOneSoPath);
-  childVmOne.initChild(workerData.initFnAddress, exports);
+  childVmOne.initChild(workerData.initFunctionAddress, exports);
   delete require.cache[childVmOneSoPath]; // cannot be reused
 
   const nativeVmOne = exports.VmOne;
