@@ -15,7 +15,7 @@ using namespace node;
 
 namespace vmone2 {
 
-/* NAN_METHOD(InitChild) {
+NAN_METHOD(InitChild) {
   if (info[0]->IsArray() && info[1]->IsObject()) {
     Local<Array> array = Local<Array>::Cast(info[0]);
     uint32_t a = array->Get(0)->Uint32Value();
@@ -28,7 +28,7 @@ namespace vmone2 {
   } else {
     Nan::ThrowError("InitChild: Invalid argunents");
   }
-} */
+}
 
 Handle<Object> Initialize() {
   Nan::EscapableHandleScope scope;
@@ -38,7 +38,7 @@ Handle<Object> Initialize() {
 }
 
 void Init(Handle<Object> exports) {
-  // exports->Set(JS_STR("initChild"), Initialize());
+  exports->Set(JS_STR("initChild"), Initialize());
 }
 
 }
