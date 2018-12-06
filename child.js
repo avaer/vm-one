@@ -11,10 +11,9 @@ const vmOne = (() => {
   childVmOne.initChild(workerData.initFunctionAddress, exports);
   delete require.cache[childVmOneSoPath]; // cannot be reused
 
-  const nativeVmOne = exports.VmOne;
-  const vmOne = nativeVmOne.fromArray(workerData.array);
-  return vmOne;
+  return exports.VmOne;
 })();
+const vm = vmOne.fromArray(workerData.array);
 
 // global initialization
 
@@ -24,11 +23,12 @@ for (const k in EventEmitter.prototype) {
 EventEmitter.call(global);
 
 global.postMessage = (m, transferList) => parentPort.postMessage(m, transferList);
+global.requireNative = vmOne.requireNative;
 
 parentPort.on('message', m => {
   switch (m.method) {
     /* case 'lock': {
-      vmOne.pushResult(global);
+      vm.pushResult(global);
       break;
     } */
     case 'runSync': {
@@ -41,7 +41,7 @@ parentPort.on('message', m => {
         console.warn(err.stack);
       }
       console.log('push', result);
-      vmOne.pushResult(result);
+      vm.pushResult(result);
       break;
     }
     case 'runAsync': {
@@ -53,7 +53,7 @@ parentPort.on('message', m => {
       } catch(err) {
         console.warn(err.stack);
       }
-      vmOne.queueAsyncResponse(m.requestKey, result);
+      vm.queueAsyncResponse(m.requestKey, result);
       break;
     }
     case 'postMessage': {
@@ -79,7 +79,7 @@ if (workerData.initModule) {
 
 // release lock
 
-vmOne.respond();
+vm.respond();
 
 /* setInterval(() => {
   console.log('child interval');

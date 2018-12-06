@@ -88,8 +88,11 @@ const vmOne = {
   make(options = {}) {
     return new Vm(options);
   },
+  setNativeRequire: nativeVmOne.setNativeRequire,
+  requireNative: nativeVmOne.requireNative,
+  initFunctionAddress: nativeVmOne.initFunctionAddress,
   fromArray(arg) {
-    return new VmOne(arg);
+    return new nativeVmOne(arg);
   },
 }
 
