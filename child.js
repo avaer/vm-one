@@ -68,6 +68,10 @@ parentPort.on('message', m => {
   }
 });
 
+// release lock
+
+v.respond();
+
 // run init module
 
 if (workerData.args) {
@@ -76,10 +80,6 @@ if (workerData.args) {
 if (workerData.initModule) {
   require(workerData.initModule);
 }
-
-// release lock
-
-vm.respond();
 
 /* setInterval(() => {
   console.log('child interval');
