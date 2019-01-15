@@ -115,7 +115,7 @@ NAN_METHOD(VmOne::GetGlobal) {
   info.GetReturnValue().Set(global);
 }
 
-void copyObject(Local<Object> src, Local<Object> dst, Local<Context> context) {
+/* void copyObject(Local<Object> src, Local<Object> dst, Local<Context> context) {
   Local<Array> propertyNames = src->GetPropertyNames(
     context,
     KeyCollectionMode::kOwnOnly,
@@ -200,7 +200,7 @@ void copyObject(Local<Object> src, Local<Object> dst, Local<Context> context) {
       dst->Set(context, key, value);
     }
   }
-}
+} */
 
 VmOne::VmOne(/* Local<Object> globalInit, */Local<Function> handler, Local<String> dirname) {
   // create context
