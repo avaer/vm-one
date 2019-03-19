@@ -1,8 +1,26 @@
 #include "vm.h"
 
+#define JS_FUNC(x) (Nan::GetFunction(x).ToLocalChecked())
+#define JS_OBJ(x) (Nan::To<v8::Object>(x).ToLocalChecked())
+#define JS_NUM(x) (Nan::To<double>(x).FromJust())
+#define JS_BOOL(x) (Nan::To<bool>(x).FromJust())
+#define JS_UINT32(x) (Nan::To<unsigned int>(x).FromJust())
+#define JS_INT32(x) (Nan::To<int>(x).FromJust())
+#define JS_ISOLATE() (v8::Isolate::GetCurrent())
+#define JS_CONTEXT() (JS_ISOLATE()->GetCurrentContext())
+#define JS__HAS(x, y) (((x)->Has(JS_CONTEXT(), (y))).FromJust())
+
+#define EXO_ToString(x) (Nan::To<v8::String>(x).ToLocalChecked())
+
+#define UINT32_TO_JS(x) (Nan::New(static_cast<uint32_t>(x)))
+#define INT32_TO_JS(x) (Nan::New(static_cast<int32_t>(x)))
+#define BOOL_TO_JS(x) ((x) ? Nan::True() : Nan::False())
+#define DOUBLE_TO_JS(x) (Nan::New(static_cast<double>(x)))
+#define FLOAT_TO_JS(x) (Nan::New(static_cast<float>(x)))
+
 namespace vmone {
 
-Handle<Object> VmOne::Initialize() {
+Local<Object> VmOne::Initialize() {
   Nan::EscapableHandleScope scope;
 
   // constructor
@@ -15,7 +33,7 @@ Handle<Object> VmOne::Initialize() {
   Nan::SetMethod(proto, "run", Run);
   Nan::SetMethod(proto, "getGlobal", GetGlobal);
 
-  Local<Function> ctorFn = ctor->GetFunction();
+  Local<Function> ctorFn = JS_FUNC(ctor);
 
   return scope.Escape(ctorFn);
 }
@@ -45,11 +63,11 @@ NAN_METHOD(VmOne::Run) {
       :
         JS_STR("script");
     Local<Integer> lineOffset = info[2]->IsNumber() ?
-        Local<Number>::Cast(info[2])->ToInteger()
+        Local<Number>::Cast(info[2])->ToInteger(JS_CONTEXT()).ToLocalChecked()
       :
         Integer::New(Isolate::GetCurrent(), 0);
     Local<Integer> colOffset = info[3]->IsNumber() ?
-        Local<Number>::Cast(info[3])->ToInteger()
+        Local<Number>::Cast(info[3])->ToInteger(JS_CONTEXT()).ToLocalChecked()
       :
         Integer::New(Isolate::GetCurrent(), 0);
 
@@ -69,7 +87,7 @@ NAN_METHOD(VmOne::Run) {
         Local<Value> argv[] = {
           JS_STR("compilestart"),
         };
-        handler->Call(Nan::Null(), sizeof(argv)/sizeof(argv[0]), argv);
+        handler->Call(JS_CONTEXT(), Nan::Null(), sizeof(argv)/sizeof(argv[0]), argv);
       }
 
       ScriptOrigin scriptOrigin(
@@ -83,7 +101,7 @@ NAN_METHOD(VmOne::Run) {
         Local<Value> argv[] = {
           JS_STR("compileend"),
         };
-        handler->Call(Nan::Null(), sizeof(argv)/sizeof(argv[0]), argv);
+        handler->Call(JS_CONTEXT(), Nan::Null(), sizeof(argv)/sizeof(argv[0]), argv);
       }
 
       if (!scriptMaybe.IsEmpty()) {
@@ -245,7 +263,7 @@ VmOne::VmOne(/* Local<Object> globalInit, */Local<Function> handler, Local<Strin
   i += strlen(binPathString) + 1;
 
   char *jsPathArg = argsString + i;
-  String::Utf8Value dirnameValue(dirname);
+  Nan::Utf8String dirnameValue(dirname);
   std::string dirnameString(*dirnameValue, dirnameValue.length());
   strncpy(jsPathArg, dirnameString.c_str(), sizeof(argsString) - i);
   i += dirnameString.length();

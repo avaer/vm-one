@@ -9,7 +9,7 @@ NAN_METHOD(SetPrototype) {
   arg->SetPrototype(Isolate::GetCurrent()->GetCurrentContext(), prototype);
 }
 
-void Init(Handle<Object> exports) {
+void Init(Local<Object> exports) {
   exports->Set(JS_STR("VmOne"), VmOne::Initialize());
   Nan::SetMethod(exports, "setPrototype", SetPrototype);
 }
