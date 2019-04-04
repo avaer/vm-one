@@ -10,6 +10,9 @@
         "src"
       ],
       'conditions': [
+        ['"<!(echo $ANDROID)"=="1"', {
+          'defines': ['ANDROID'],
+        }],
         ['"<!(echo $LUMIN)"=="1"', {
           'defines': ['LUMIN'],
         }],
@@ -25,6 +28,9 @@
         "src"
       ],
       'conditions': [
+        ['"<!(echo $ANDROID)"=="1"', {
+          'defines': ['ANDROID'],
+        }],
         ['"<!(echo $LUMIN)"=="1"', {
           'defines': ['LUMIN'],
         }],
