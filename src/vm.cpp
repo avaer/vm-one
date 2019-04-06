@@ -221,6 +221,9 @@ VmOne::VmOne(/* Local<Object> globalInit, */Local<Function> handler, Local<Strin
 #else
   void *allowNativesSyntaxHandle = dlopen(NULL, RTLD_LAZY);
   void *allowNativesSyntaxAddress = dlsym(allowNativesSyntaxHandle, "_ZN2v88internal25FLAG_allow_natives_syntaxE");
+  if (!allowNativesSyntaxAddress) {
+    allowNativesSyntaxAddress = dlsym(RTLD_DEFAULT, "_ZN2v88internal25FLAG_allow_natives_syntaxE");
+  }
 #endif
   bool *flag = (bool *)allowNativesSyntaxAddress;
   *flag = true;
@@ -232,6 +235,9 @@ VmOne::VmOne(/* Local<Object> globalInit, */Local<Function> handler, Local<Strin
 #else
   void *getCurrentPlatformHandle = dlopen(NULL, RTLD_LAZY);
   void *getCurrentPlatformAddress = dlsym(getCurrentPlatformHandle, "_ZN2v88internal2V818GetCurrentPlatformEv");
+  if (!getCurrentPlatformAddress) {
+    getCurrentPlatformAddress = dlsym(RTLD_DEFAULT, "_ZN2v88internal2V818GetCurrentPlatformEv");
+  }
 #endif
   Platform *(*GetCurrentPlatform)(void) = (Platform *(*)(void))getCurrentPlatformAddress;
   MultiIsolatePlatform *platform = (MultiIsolatePlatform *)GetCurrentPlatform();
