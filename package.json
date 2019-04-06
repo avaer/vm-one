@@ -1,6 +1,6 @@
 {
   "name": "vm-one",
-  "version": "0.0.34",
+  "version": "0.0.32",
   "description": "Node.js V8 one way VM",
   "main": "index.js",
   "scripts": {
@@ -17,6 +17,6 @@
   },
   "homepage": "https://github.com/modulesio/vm-one#readme",
   "dependencies": {
-    "nan": "^2.10.0"
+    "nan": "^2.12.1"
   }
 }
