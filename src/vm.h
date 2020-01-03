@@ -20,7 +20,7 @@ namespace vmone {
 
 class VmOne : public ObjectWrap {
   public:
-    static Handle<Object> Initialize();
+    static Local<Object> Initialize();
   protected:
     static NAN_METHOD(New);
     static NAN_METHOD(Run);
